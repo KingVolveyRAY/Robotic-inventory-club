@@ -1,0 +1,60 @@
+<%- include('partials/head', { title: 'Panel Pengurus' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <div class="page-heading">
+    <div>
+      <h1>Panel pengurus</h1>
+      <p>Tinjau pengajuan dan catat pengambilan serta pengembalian alat.</p>
+    </div>
+  </div>
+  <%- include('partials/admin-nav', { current: 'loans' }) %>
+  <%- include('partials/feedback') %>
+  <%- include('partials/loan-tabs', { base: '/admin' }) %>
+  <% if (!loans.length) { %>
+    <%- include('partials/empty', {
+      glyph: 'inbox',
+      title: 'Tidak ada peminjaman',
+      description: 'Belum ada peminjaman dalam status ini.',
+      link: null,
+    }) %>
+  <% } else { %>
+    <div class="loan-list">
+      <% for (const loan of loans) { %>
+        <article class="panel loan-card staff-loan" id="pinjaman-<%= loan.id %>">
+          <header class="loan-card-header">
+            <div>
+              <span class="loan-reference">#<%= loan.id %> · <%= categoryById[loan.category].name %></span>
+              <h2><%= loan.equipment_name %></h2>
+              <p class="borrower"><%- icon('user-round', 16) %> <strong><%= loan.borrower %></strong> <span><%= loan.borrower_email %></span></p>
+            </div>
+            <%- include('partials/loan-badge', { loan }) %>
+          </header>
+          <%- include('partials/loan-meta', { loan }) %>
+          <% if (loan.status === 'pending' || loan.status === 'approved' || loan.status === 'borrowed') { %>
+            <form class="loan-actions" action="/admin/peminjaman/<%= loan.id %>/tindakan" method="post">
+              <%- include('partials/csrf') %>
+              <% if (loan.status === 'pending') { %>
+                <% if (loan.due_date < today) { %>
+                  <p class="action-hint">Jadwal pengajuan ini sudah lewat.</p>
+                <% } else { %>
+                  <button class="button button-small button-primary" name="action" value="approve">Setujui <%- icon('check', 16) %></button>
+                <% } %>
+                <button class="button button-small button-quiet-danger" name="action" value="decline" data-confirm="Tolak pengajuan ini?">Tolak</button>
+              <% } else if (loan.status === 'approved') { %>
+                <% if (loan.start_date <= today && today <= loan.due_date) { %>
+                  <button class="button button-small button-primary" name="action" value="pickup">Catat pengambilan <%- icon('check', 16) %></button>
+                <% } else { %>
+                  <p class="action-hint"><%= today < loan.start_date ? 'Pengambilan belum terjadwal untuk hari ini.' : 'Jadwal pengambilan sudah lewat.' %></p>
+                <% } %>
+                <button class="button button-small button-quiet-danger" name="action" value="cancel" data-confirm="Batalkan peminjaman dan lepaskan stok?">Batalkan</button>
+              <% } else { %>
+                <button class="button button-small button-primary" name="action" value="return" data-confirm="Alat sudah diperiksa dan dikembalikan ke inventaris?">Catat pengembalian <%- icon('check', 16) %></button>
+              <% } %>
+            </form>
+          <% } %>
+        </article>
+      <% } %>
+    </div>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

@@ -1,0 +1,48 @@
+<%- include('partials/head', { title: 'Kelola Inventaris' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <div class="page-heading">
+    <div>
+      <h1>Kelola inventaris</h1>
+      <p>Tambah alat, atur total stok, dan tentukan alat yang tampil di katalog.</p>
+    </div>
+    <a class="button button-primary" href="/admin/alat/baru"><%- icon('plus', 18) %> Tambah alat</a>
+  </div>
+  <%- include('partials/admin-nav', { current: 'inventory' }) %>
+  <%- include('partials/feedback') %>
+  <% if (items.length) { %>
+    <div class="panel inventory-table" tabindex="0" role="region" aria-label="Tabel inventaris alat">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Nama alat</th>
+            <th scope="col">Tersedia</th>
+            <th scope="col">Dipesan / dipinjam</th>
+            <th scope="col">Total</th>
+            <th scope="col">Katalog</th>
+            <th scope="col"><span class="sr-only">Tindakan</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (const item of items) { %>
+            <tr>
+              <th scope="row"><%= item.name %><small><%= categoryById[item.category].name %></small></th>
+              <td><strong><%= item.available %></strong></td>
+              <td><%= item.reserved %></td>
+              <td><%= item.total %></td>
+              <td><span class="badge badge-<%= item.active ? 'green' : 'muted' %>"><%= item.active ? 'Tayang' : 'Disembunyikan' %></span></td>
+              <td><a class="button button-small button-secondary" href="/admin/alat/<%= item.id %>" aria-label="Edit <%= item.name %>"><%- icon('pencil', 15) %> Edit</a></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <%- include('partials/empty', {
+      glyph: 'package-open', title: 'Belum ada alat',
+      description: 'Tambahkan alat agar anggota bisa melihatnya di katalog.',
+      link: null,
+    }) %>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

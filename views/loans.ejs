@@ -1,0 +1,57 @@
+<%- include('partials/head', { title: 'Peminjaman Saya' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <div class="page-heading">
+    <div>
+      <h1>Peminjaman saya</h1>
+      <p>Pantau pengajuan, jadwal pengambilan, dan pengembalian alatmu.</p>
+    </div>
+    <a class="button button-primary" href="/#katalog"><%- icon('plus', 18) %> Cari alat</a>
+  </div>
+  <%- include('partials/feedback') %>
+  <%- include('partials/loan-tabs', { base: '/peminjaman', counts: null }) %>
+  <% if (!loans.length) { %>
+    <%- include('partials/empty', {
+      glyph: 'clipboard-list',
+      title: filter === 'history' ? 'Belum ada riwayat' : 'Belum ada peminjaman',
+      description: filter === 'history' ? 'Peminjaman yang selesai akan muncul di sini.' : 'Pilih alat yang kamu butuhkan dan ajukan peminjaman.',
+      link: filter === 'history' ? null : { href: '/#katalog', label: 'Jelajahi katalog' },
+    }) %>
+  <% } else { %>
+    <div class="loan-list">
+      <% for (const loan of loans) { %>
+        <article class="panel loan-card" id="pinjaman-<%= loan.id %>">
+          <header class="loan-card-header">
+            <div class="loan-item">
+              <div class="loan-thumbnail">
+                <%- include('partials/equipment-image', {
+                  item: { name: loan.equipment_name, image: loan.image, category: loan.category },
+                  eager: false,
+                }) %>
+              </div>
+              <div>
+                <span class="loan-reference">#<%= loan.id %> · <%= categoryById[loan.category].name %></span>
+                <h2>
+                  <% if (loan.equipment_active) { %>
+                    <a href="/alat/<%= loan.equipment_id %>"><%= loan.equipment_name %></a>
+                  <% } else { %>
+                    <%= loan.equipment_name %>
+                  <% } %>
+                </h2>
+              </div>
+            </div>
+            <%- include('partials/loan-badge', { loan }) %>
+          </header>
+          <%- include('partials/loan-meta', { loan }) %>
+          <% if (loan.status === 'pending' || loan.status === 'approved') { %>
+            <form class="loan-actions" action="/peminjaman/<%= loan.id %>/batal" method="post">
+              <%- include('partials/csrf') %>
+              <button class="button button-small button-quiet-danger" type="submit" data-confirm="Batalkan peminjaman ini?">Batalkan pengajuan</button>
+            </form>
+          <% } %>
+        </article>
+      <% } %>
+    </div>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

@@ -1,0 +1,11 @@
+<%- include('partials/head', { title: 'Status ' + status }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell auth-main">
+  <section class="panel auth-card error-card">
+    <span class="page-icon"><%- icon(status === 404 ? 'search-x' : 'circle-alert', 25) %></span>
+    <h1><%= status === 404 ? 'Halaman tidak ditemukan' : 'Permintaan belum berhasil' %></h1>
+    <p class="page-description"><%= message %></p>
+    <a class="button button-primary" href="<%= back.href %>"><%- icon('arrow-left', 17) %> <%= back.label %></a>
+  </section>
+</main>
+<%- include('partials/footer') %>

@@ -1,0 +1,8 @@
+<nav class="staff-nav" aria-label="Navigasi pengurus">
+  <a href="/admin" <%= current === 'loans' ? 'aria-current=page' : '' %>>
+    <%- icon('clipboard-list', 17) %> Peminjaman
+  </a>
+  <a href="/admin/alat" <%= current === 'inventory' ? 'aria-current=page' : '' %>>
+    <%- icon('boxes', 17) %> Inventaris
+  </a>
+</nav>

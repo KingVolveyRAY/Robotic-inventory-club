@@ -1,0 +1,62 @@
+<%- include('partials/head', { title: item.name }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <a class="back-link" href="/#katalog"><%- icon('arrow-left', 17) %> Kembali ke katalog</a>
+  <div class="detail-grid">
+    <article class="panel equipment-detail">
+      <div class="detail-media">
+        <%- include('partials/equipment-image', { item, eager: true }) %>
+        <%- include('partials/stock', { item }) %>
+      </div>
+      <div class="equipment-detail-copy">
+        <span class="card-category"><%= categoryById[item.category].name %></span>
+        <h1><%= item.name %></h1>
+        <p><%= item.description %></p>
+        <dl class="detail-stock">
+          <div><dt>Tersedia</dt><dd><%= item.available %> unit</dd></div>
+          <div><dt>Total stok</dt><dd><%= item.total %> unit</dd></div>
+        </dl>
+      </div>
+    </article>
+
+    <section class="panel detail-form">
+      <span class="page-icon"><%- icon('clipboard-list', 24) %></span>
+      <h2>Ajukan peminjaman</h2>
+      <%- include('partials/feedback') %>
+      <% if (item.available < 1) { %>
+        <p class="page-description">Seluruh unit sedang dipesan, dipinjam, atau stok alat ini sedang kosong.</p>
+        <a class="button button-secondary" href="/#katalog">Lihat alat lain <%- icon('arrow-right', 16) %></a>
+      <% } else if (!user) { %>
+        <p class="page-description">Masuk atau buat akun anggota untuk memilih jumlah unit dan mengajukan tanggal pinjam.</p>
+        <a class="button button-primary button-wide" href="/masuk?lanjut=<%= encodeURIComponent('/alat/' + item.id) %>">Masuk untuk meminjam <%- icon('arrow-right', 17) %></a>
+      <% } else { %>
+        <p class="page-description">Pilih jadwal dan jumlah alat. Pengurus akan meninjau pengajuanmu.</p>
+        <form class="form-stack" action="/alat/<%= item.id %>/pinjam" method="post" data-loan-days="<%= maxLoanDays %>">
+          <%- include('partials/csrf') %>
+          <label class="field">
+            <span>Jumlah unit</span>
+            <input name="quantity" type="number" min="1" max="<%= item.available %>" value="<%= values.quantity %>" required>
+            <small><%= item.available %> unit tersedia.</small>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>Tanggal ambil</span>
+              <input name="start" type="date" min="<%= today %>" max="<%= lastStart %>" value="<%= values.start %>" required>
+            </label>
+            <label class="field">
+              <span>Tanggal kembali</span>
+              <input name="due" type="date" min="<%= today %>" max="<%= lastDue %>" value="<%= values.due %>" required>
+            </label>
+          </div>
+          <p class="field-hint">Maksimal <%= maxLoanDays %> hari, termasuk hari pengambilan.</p>
+          <label class="field">
+            <span>Keperluan</span>
+            <textarea name="purpose" placeholder="Contoh: praktik perakitan robot…" rows="3" minlength="5" maxlength="300" required><%= values.purpose %></textarea>
+          </label>
+          <button class="button button-primary button-wide" type="submit">Kirim pengajuan <%- icon('arrow-right', 17) %></button>
+        </form>
+      <% } %>
+    </section>
+  </div>
+</main>
+<%- include('partials/footer') %>

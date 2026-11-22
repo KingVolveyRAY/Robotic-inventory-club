@@ -1,0 +1,6 @@
+<dl class="loan-meta">
+  <div><dt>Jumlah</dt><dd><%= loan.quantity %> unit</dd></div>
+  <div><dt>Tanggal ambil</dt><dd><time datetime="<%= loan.start_date %>"><%= formatDate(loan.start_date) %></time></dd></div>
+  <div><dt>Tanggal kembali</dt><dd><time datetime="<%= loan.due_date %>"><%= formatDate(loan.due_date) %></time></dd></div>
+</dl>
+<p class="loan-purpose"><strong>Keperluan</strong> <%= loan.purpose %></p>

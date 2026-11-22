@@ -1,0 +1,5 @@
+<% if (error) { %>
+  <div class="alert alert-error" role="alert"><%- icon('circle-alert', 19) %> <span><%= error %></span></div>
+<% } else if (notice) { %>
+  <div class="alert alert-success" role="status"><%- icon('circle-check', 19) %> <span><%= notice %></span></div>
+<% } %>

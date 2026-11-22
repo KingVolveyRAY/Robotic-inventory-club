@@ -1,0 +1,37 @@
+<header class="site-header">
+  <div class="site-header-inner shell">
+    <%- include('brand') %>
+    <nav class="site-nav" aria-label="Navigasi utama">
+      <a href="/" <%= page === 'catalog' ? 'aria-current=page' : '' %>>Katalog</a>
+      <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>>Peminjaman Saya</a>
+      <a href="/panduan" <%= page === 'guide' ? 'aria-current=page' : '' %>>Panduan</a>
+    </nav>
+    <div class="header-account">
+      <% if (!user) { %>
+        <a href="/masuk" class="button button-small button-secondary header-login"><%- icon('log-in', 17) %> Masuk</a>
+      <% } else { %>
+        <details class="account-menu">
+          <summary>
+            <span class="avatar" aria-hidden="true"><%= initials(user.name) %></span>
+            <span class="sr-only">Menu akun</span>
+            <span class="account-name"><%= user.name %></span>
+            <%- icon('chevron-down', 15) %>
+          </summary>
+          <div class="account-popover">
+            <div class="account-identity">
+              <strong><%= user.name %></strong>
+              <small><%= user.role === 'admin' ? 'Pengurus' : 'Anggota' %></small>
+            </div>
+            <% if (user.role === 'admin') { %>
+              <a href="/admin" <%= page === 'admin' ? 'aria-current=page' : '' %>><%- icon('layout-dashboard', 17) %> Panel Pengurus</a>
+            <% } %>
+            <form action="/keluar" method="post">
+              <%- include('csrf') %>
+              <button type="submit"><%- icon('log-out', 17) %> Keluar</button>
+            </form>
+          </div>
+        </details>
+      <% } %>
+    </div>
+  </div>
+</header>

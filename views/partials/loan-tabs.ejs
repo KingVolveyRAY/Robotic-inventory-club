@@ -1,0 +1,8 @@
+<nav class="tabs" aria-label="Filter status peminjaman">
+  <% for (const tab of tabs) { %>
+    <a href="<%= base %>?status=<%= tab.id %>" <%= filter === tab.id ? 'aria-current=page' : '' %>>
+      <%= tab.label %>
+      <% if (counts) { %><span><%= counts[tab.id] %></span><% } %>
+    </a>
+  <% } %>
+</nav>

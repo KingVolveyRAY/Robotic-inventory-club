@@ -1,0 +1,98 @@
+<%- include('partials/head', { title: 'Katalog Peralatan Robotik' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell catalog-main">
+  <section class="hero" aria-labelledby="hero-title">
+    <img class="hero-photo" src="/images/rover-lab.webp" alt="" width="1740" height="550" fetchpriority="high">
+    <div class="hero-shade"></div>
+    <div class="hero-copy">
+      <h1 id="hero-title">Peralatan robotik,<br><span>siap kamu pinjam.</span></h1>
+      <p>Dari mikrokontroler hingga kit robotik, temukan alat yang kamu butuhkan untuk proyek berikutnya.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#katalog">Jelajahi alat <%- icon('arrow-down', 17) %></a>
+        <a class="button button-on-dark" href="/panduan">Cara peminjaman <%- icon('arrow-up-right', 17) %></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-grid" aria-label="Ringkasan inventaris">
+    <% for (const stat of stats) { %>
+      <div class="stat">
+        <span class="stat-icon tone-<%= stat.tone %>"><%- icon(stat.icon, 23) %></span>
+        <dl class="stat-data">
+          <dt><%= stat.name %></dt>
+          <dd><%= stat.value.toLocaleString('id-ID') %></dd>
+        </dl>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="catalog" id="katalog" aria-labelledby="catalog-title">
+    <div class="catalog-heading">
+      <div>
+        <h2 id="catalog-title">Katalog alat</h2>
+        <p>Temukan peralatan sesuai kebutuhan proyekmu.</p>
+      </div>
+      <form method="get" action="/#katalog" class="catalog-controls" role="search">
+        <% if (category) { %><input type="hidden" name="kategori" value="<%= category %>"><% } %>
+        <div class="search-field">
+          <button type="submit" aria-label="Cari alat"><%- icon('search', 19) %></button>
+          <label for="catalog-search" class="sr-only">Cari nama alat</label>
+          <input type="search" id="catalog-search" name="q" value="<%= search %>" maxlength="80" placeholder="Cari alat robotik…" autocomplete="off">
+        </div>
+        <label class="sort-field" for="sort">
+          <%- icon('arrow-down-up', 16) %>
+          <span class="sr-only">Urutkan alat</span>
+          <select id="sort" name="urut" data-submit-on-change>
+            <% for (const option of sorts) { %>
+              <option value="<%= option.id %>" <%= sort === option.id ? 'selected' : '' %>><%= option.label %></option>
+            <% } %>
+          </select>
+          <%- icon('chevron-down', 14) %>
+        </label>
+      </form>
+    </div>
+
+    <div class="catalog-filter-row">
+      <nav class="filters" aria-label="Kategori alat">
+        <% for (const filter of filters) { %>
+          <a class="filter" href="<%= catalogLink(filter.id) %>" <%= category === filter.id ? 'aria-current=page' : '' %>>
+            <%- icon(filter.icon, 16) %> <%= filter.name %>
+          </a>
+        <% } %>
+      </nav>
+      <span class="results-count"><%= items.length %> jenis alat</span>
+    </div>
+
+    <% if (items.length === 0) { %>
+      <%- include('partials/empty', {
+        glyph: search || category ? 'search-x' : 'package-open',
+        title: search || category ? 'Alat tidak ditemukan' : 'Katalog masih kosong',
+        description: search || category
+          ? 'Coba kata kunci lain atau lihat semua kategori.'
+          : 'Peralatan akan muncul setelah pengurus menambahkannya ke katalog.',
+        link: search || category ? { href: '/#katalog', label: 'Lihat semua alat' } : null,
+      }) %>
+    <% } else { %>
+      <div class="equipment-grid">
+        <% for (const [index, item] of items.entries()) { %>
+          <article class="equipment-card">
+            <div class="card-media">
+              <%- include('partials/equipment-image', { item, eager: index < 3 }) %>
+              <%- include('partials/stock', { item }) %>
+            </div>
+            <div class="card-body">
+              <span class="card-category"><%= categoryById[item.category].name %></span>
+              <h3><%= item.name %></h3>
+              <p><%= item.description %></p>
+              <div class="card-footer">
+                <span class="card-quantity"><%- icon('box', 17) %> <strong><%= item.available %></strong> unit tersedia</span>
+                <a class="card-link" href="/alat/<%= item.id %>" aria-label="Detail <%= item.name %>">Detail <%- icon('arrow-right', 16) %></a>
+              </div>
+            </div>
+          </article>
+        <% } %>
+      </div>
+    <% } %>
+  </section>
+</main>
+<%- include('partials/footer') %>

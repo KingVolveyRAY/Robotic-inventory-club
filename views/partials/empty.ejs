@@ -1,0 +1,8 @@
+<div class="empty-state">
+  <span class="empty-icon"><%- icon(glyph, 27) %></span>
+  <h2><%= title %></h2>
+  <p><%= description %></p>
+  <% if (link) { %>
+    <a class="button button-secondary" href="<%= link.href %>"><%= link.label %> <%- icon('arrow-right', 16) %></a>
+  <% } %>
+</div>

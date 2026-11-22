@@ -1,0 +1,22 @@
+<form method="post" action="<%= isRegister ? '/daftar' : '/masuk' %>" class="form-stack" id="auth-form">
+  <%- include('csrf') %>
+  <input type="hidden" name="lanjut" value="<%= nextPath %>">
+  <% if (isRegister) { %>
+    <label class="field">
+      <span>Nama lengkap</span>
+      <input type="text" name="name" value="<%= name %>" minlength="2" maxlength="80" required autocomplete="name">
+    </label>
+  <% } %>
+  <label class="field">
+    <span>Email</span>
+    <input type="email" name="email" value="<%= email %>" maxlength="254" required autocomplete="email">
+  </label>
+  <label class="field">
+    <span>Kata sandi</span>
+    <input type="password" name="password" <%= isRegister ? 'minlength=10' : '' %> maxlength="128" required autocomplete="<%= isRegister ? 'new-password' : 'current-password' %>">
+    <% if (isRegister) { %><small>Minimal 10 karakter.</small><% } %>
+  </label>
+  <button class="button button-primary button-wide" type="submit">
+    <%= isRegister ? 'Buat akun' : 'Masuk' %> <%- icon('arrow-right', 17) %>
+  </button>
+</form>

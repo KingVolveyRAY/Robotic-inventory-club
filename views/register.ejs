@@ -1,0 +1,13 @@
+<%- include('partials/head', { title: 'Daftar' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell auth-main">
+  <div class="auth-card panel">
+    <span class="page-icon"><%- icon('user-round-plus', 25) %></span>
+    <h1>Daftar sebagai anggota</h1>
+    <p class="page-description">Buat akun untuk mengajukan peminjaman alat klub.</p>
+    <%- include('partials/feedback') %>
+    <%- include('partials/auth-form', { isRegister: true }) %>
+    <p class="auth-switch">Sudah punya akun? <a href="/masuk<%= suffix %>">Masuk</a></p>
+  </div>
+</main>
+<%- include('partials/footer') %>

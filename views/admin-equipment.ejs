@@ -1,0 +1,47 @@
+<%- include('partials/head', { title: item ? 'Edit Alat' : 'Tambah Alat' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main narrow-main">
+  <a class="back-link" href="/admin/alat"><%- icon('arrow-left', 17) %> Kembali ke inventaris</a>
+  <div class="panel equipment-editor">
+    <span class="page-icon"><%- icon(item ? 'pencil' : 'package-plus', 24) %></span>
+    <h1><%= item ? 'Edit alat' : 'Tambah alat' %></h1>
+    <p class="page-description">Informasi ini akan membantu anggota memilih alat yang tepat.</p>
+    <%- include('partials/feedback') %>
+    <form class="form-stack" action="/admin/alat<%= item ? '/' + item.id : '' %>" method="post">
+      <%- include('partials/csrf') %>
+      <label class="field">
+        <span>Nama alat</span>
+        <input name="name" value="<%= values.name %>" minlength="2" maxlength="100" required>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Kategori</span>
+          <select name="category" required>
+            <option value="">Pilih kategori</option>
+            <% for (const category of categories) { %>
+              <option value="<%= category.id %>" <%= values.category === category.id ? 'selected' : '' %>><%= category.name %></option>
+            <% } %>
+          </select>
+        </label>
+        <label class="field">
+          <span>Total stok</span>
+          <input type="number" name="total" min="<%= item?.reserved ?? 0 %>" max="999" value="<%= values.total %>" required>
+          <% if (item?.reserved) { %><small><%= item.reserved %> unit sedang dipesan atau dipinjam.</small><% } %>
+        </label>
+      </div>
+      <label class="field">
+        <span>Deskripsi</span>
+        <textarea name="description" rows="4" minlength="10" maxlength="500" required><%= values.description %></textarea>
+      </label>
+      <label class="check-field">
+        <input type="checkbox" name="active" value="1" <%= values.active ? 'checked' : '' %>>
+        <span>Tampilkan di katalog</span>
+      </label>
+      <div class="editor-actions">
+        <a class="button button-secondary" href="/admin/alat">Batal</a>
+        <button type="submit" class="button button-primary">Simpan alat <%- icon('check', 17) %></button>
+      </div>
+    </form>
+  </div>
+</main>
+<%- include('partials/footer') %>

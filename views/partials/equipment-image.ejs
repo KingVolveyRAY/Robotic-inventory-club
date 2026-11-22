@@ -1,0 +1,5 @@
+<% if (item.image) { %>
+  <img src="/images/<%= item.image %>" alt="<%= item.name %>" width="768" height="384" loading="<%= eager ? 'eager' : 'lazy' %>" decoding="async">
+<% } else { %>
+  <span class="image-placeholder"><%- icon(categoryById[item.category].icon, 62) %></span>
+<% } %>

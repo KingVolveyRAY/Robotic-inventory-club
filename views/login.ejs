@@ -1,0 +1,28 @@
+<%- include('partials/head', { title: 'Masuk' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell auth-main">
+  <div class="auth-card panel">
+    <span class="page-icon"><%- icon('log-in', 25) %></span>
+    <h1>Masuk ke RoboLab</h1>
+    <p class="page-description">Gunakan akunmu untuk meminjam alat dan memantau pengajuan.</p>
+    <%- include('partials/feedback') %>
+    <%- include('partials/auth-form', { isRegister: false }) %>
+    <p class="auth-switch">Belum punya akun? <a href="/daftar<%= suffix %>">Daftar sebagai anggota</a></p>
+    <% if (demo) { %>
+      <details class="demo-accounts">
+        <summary><%- icon('flask-conical', 17) %> Akun demo <%- icon('chevron-down', 16) %></summary>
+        <div class="demo-options">
+          <% for (const [role, account] of Object.entries(demoAccounts)) { %>
+            <div>
+              <span><strong><%= role === 'admin' ? 'Pengurus' : 'Anggota' %></strong></span>
+              <small><%= account.email %></small>
+              <small><%= account.password %></small>
+              <button type="button" class="button button-small button-secondary" data-demo-email="<%= account.email %>" data-demo-password="<%= account.password %>" hidden>Isi formulir</button>
+            </div>
+          <% } %>
+        </div>
+      </details>
+    <% } %>
+  </div>
+</main>
+<%- include('partials/footer') %>
