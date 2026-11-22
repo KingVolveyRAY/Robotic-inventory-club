@@ -1,5 +1,5 @@
 import { openPostgres, openSqlite } from './db-driver.js';
-import { AppError } from './domain.js';
+import { ADMIN_USERNAME, AppError } from './domain.js';
 
 const metadataSchema = `
   CREATE TABLE IF NOT EXISTS metadata (
@@ -67,6 +67,12 @@ const schema = (postgres) => {
   `;
 };
 
+const adminLoginSchema = `
+  ALTER TABLE users ADD COLUMN username TEXT CHECK (username IS NULL OR role = 'admin');
+  ALTER TABLE users ADD COLUMN password_revision INTEGER NOT NULL DEFAULT 0;
+  CREATE UNIQUE INDEX users_username ON users(username);
+`;
+
 const staffActions = new Map([
   ['approve', { from: 'pending', to: 'approved' }],
   ['decline', { from: 'pending', to: 'declined' }],
@@ -93,10 +99,20 @@ function records(connection) {
   return {
     query,
     userByEmail: (email) => first('SELECT * FROM users WHERE email = ?', email),
-    async createUser(name, email, passwordHash, role) {
-      const row = await first('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?) RETURNING id',
-        name, email, passwordHash, role);
+    adminByUsername: (username) => first("SELECT * FROM users WHERE username = ? AND role = 'admin'", username),
+    async createUser(name, email, passwordHash, role, { username = null, passwordRevision = 0 } = {}) {
+      const row = await first(`
+        INSERT INTO users (name, email, password_hash, role, username, password_revision)
+        VALUES (?, ?, ?, ?, ?, ?) RETURNING id
+      `, name, email, passwordHash, role, username, passwordRevision);
       return row.id;
+    },
+    setAdminUsername: (id, username) => query("UPDATE users SET username = ? WHERE id = ? AND role = 'admin'", username, id),
+    setAdminPassword: (id, hash, revision) => query(`
+      UPDATE users SET password_hash = ?, password_revision = ? WHERE id = ? AND role = 'admin'
+    `, hash, revision, id),
+    async passwordIsCurrent(userId, hash) {
+      return Boolean(await first('SELECT id FROM users WHERE id = ? AND password_hash = ?', userId, hash));
     },
     findSession: (hash, now) => first(`
       SELECT sessions.user_id, sessions.csrf_token, users.name, users.role
@@ -105,6 +121,7 @@ function records(connection) {
     `, hash, now),
     storeSession: (hash, userId, csrf, expires) => query('INSERT INTO sessions VALUES (?, ?, ?, ?)', hash, userId, csrf, expires),
     deleteSession: (hash) => query('DELETE FROM sessions WHERE token_hash = ?', hash),
+    deleteUserSessions: (id) => query('DELETE FROM sessions WHERE user_id = ?', id),
     expireSessions: (now) => query('DELETE FROM sessions WHERE expires_at <= ?', now),
     catalog: () => query('SELECT * FROM inventory WHERE active = 1 ORDER BY id'),
     inventory: () => query('SELECT * FROM inventory ORDER BY active DESC, LOWER(name), id'),
@@ -151,6 +168,14 @@ export async function openInventory({ databasePath, databaseUrl }) {
       if (!await database.hasMetadata('schema:v1')) {
         await connection.script(schema(driver.dialect === 'postgres'));
         await database.setMetadata('schema:v1', '1');
+      }
+      if (!await database.hasMetadata('schema:v2')) {
+        await connection.script(adminLoginSchema);
+        await database.query(`
+          UPDATE users SET username = ?
+          WHERE role = 'admin' AND (SELECT COUNT(*) FROM users WHERE role = 'admin') = 1
+        `, ADMIN_USERNAME);
+        await database.setMetadata('schema:v2', '1');
       }
     });
   } catch (error) {

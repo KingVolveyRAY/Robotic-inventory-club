@@ -1,9 +1,15 @@
 import { hashPassword, validPassword } from './auth.js';
-import { clubDate, normalizeEmail, shiftDate, validEmail } from './domain.js';
+import { ADMIN_USERNAME, clubDate, normalizeEmail, shiftDate, validEmail } from './domain.js';
 
 export const demoAccounts = {
   member: { name: 'Alya Pratama', email: 'anggota@robolab.test', password: 'Demo-Anggota-2026!' },
-  admin: { name: 'Pengurus RoboLab', email: 'pengurus@robolab.test', password: 'Demo-Pengurus-2026!' },
+  admin: {
+    name: 'Pengurus RoboLab',
+    email: 'pengurus@robolab.test',
+    username: ADMIN_USERNAME,
+    password: 'Rakit-Robot-Bareng',
+    passwordRevision: 1,
+  },
 };
 
 const demoEquipment = [
@@ -57,26 +63,38 @@ export async function prepareData(inventory, { demo, admin, sampleInventory }) {
   }
 }
 
-async function seedAdmin(inventory, admin) {
-  const email = normalizeEmail(admin.email);
-  if (!validEmail(email) || !validPassword(admin.password, 12)) {
+async function seedAdmin(inventory, { email: configuredEmail, password, passwordRevision = 0 }) {
+  const email = normalizeEmail(configuredEmail);
+  if (!validEmail(email) || !validPassword(password, 12)) {
     throw new Error('Isi email pengurus yang valid dan kata sandi pengurus minimal 12 karakter (maksimal 128 byte).');
   }
 
-  const existing = await inventory.userByEmail(email);
-  if (existing?.role === 'admin') return;
-  const hash = await hashPassword(admin.password);
   await inventory.transaction(async (database) => {
     const user = await database.userByEmail(email);
     if (user?.role === 'member') {
       throw new Error('Email pengurus awal sudah terdaftar sebagai anggota. Gunakan email lain.');
     }
-    if (!user) await database.createUser('Pengurus RoboLab', email, hash, 'admin');
+
+    const username = user?.username ?? (await database.adminByUsername(ADMIN_USERNAME) ? null : ADMIN_USERNAME);
+    if (!user) {
+      await database.createUser('Pengurus RoboLab', email, await hashPassword(password), 'admin', {
+        username, passwordRevision,
+      });
+      return;
+    }
+    if (username && !user.username) await database.setAdminUsername(user.id, username);
+    if (passwordRevision > user.password_revision) {
+      await database.setAdminPassword(user.id, await hashPassword(password), passwordRevision);
+      await database.deleteUserSessions(user.id);
+    }
   });
 }
 
 async function seedDemo(inventory) {
-  if (await inventory.hasMetadata('demo-seeded')) return;
+  if (await inventory.hasMetadata('demo-seeded')) {
+    await seedAdmin(inventory, demoAccounts.admin);
+    return;
+  }
 
   const [memberHash, adminHash] = await Promise.all([
     hashPassword(demoAccounts.member.password),
@@ -86,7 +104,10 @@ async function seedDemo(inventory) {
   await inventory.transaction(async (database) => {
     if (await database.hasMetadata('demo-seeded')) return;
     const member = await database.createUser(demoAccounts.member.name, demoAccounts.member.email, memberHash, 'member');
-    await database.createUser(demoAccounts.admin.name, demoAccounts.admin.email, adminHash, 'admin');
+    await database.createUser(demoAccounts.admin.name, demoAccounts.admin.email, adminHash, 'admin', {
+      username: demoAccounts.admin.username,
+      passwordRevision: demoAccounts.admin.passwordRevision,
+    });
     const ids = await addSamples(database);
     const date = clubDate();
     const examples = [

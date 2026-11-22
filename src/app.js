@@ -5,7 +5,7 @@ import { rateLimit } from 'express-rate-limit';
 import { checkCsrf, createSessions, hashPassword, matchesPassword, validPassword } from './auth.js';
 import { openInventory } from './database.js';
 import {
-  AppError, asText, categories, categoryById, clubDate, formatDate, historyStatuses,
+  ADMIN_USERNAME, AppError, asText, categories, categoryById, clubDate, formatDate, historyStatuses,
   MAX_ADVANCE_DAYS, MAX_LOAN_DAYS, memberTabs, normalizeEmail, recordId, shiftDate,
   staffTabs, statuses, validEmail, validateEquipment, validateLoan,
 } from './domain.js';
@@ -137,6 +137,7 @@ export async function createApp({
     res.status(status).render(view, {
       name: asText(values.name).slice(0, 80),
       email: normalizeEmail(values.email).slice(0, 254),
+      login: normalizeEmail(values.login ?? values.email).slice(0, 254),
       nextPath, suffix, error,
     });
   }
@@ -164,13 +165,15 @@ export async function createApp({
 
   app.post('/masuk', authLimit, async (req, res) => {
     if (res.locals.user) return res.redirect(303, '/peminjaman');
-    const email = normalizeEmail(req.body.email);
-    const account = validEmail(email) ? await inventory.userByEmail(email) : undefined;
+    const identifier = asText(req.body.login ?? req.body.email).toLowerCase();
+    let account;
+    if (identifier === ADMIN_USERNAME) account = await inventory.adminByUsername(identifier);
+    else if (validEmail(identifier)) account = await inventory.userByEmail(identifier);
+
     const matches = await matchesPassword(req.body.password, account?.password_hash);
-    if (!account || !matches) {
-      return showAuth(req, res, 'login', req.body, 'Email atau kata sandi salah.', 401);
+    if (!account || !matches || !await sessions.start(res, req.session, account.id, account.password_hash)) {
+      return showAuth(req, res, 'login', req.body, 'Email, nama pengguna, atau kata sandi salah.', 401);
     }
-    await sessions.start(res, req.session, account.id);
     res.redirect(303, safeNext(req.body.lanjut) || (account.role === 'admin' ? '/admin' : '/peminjaman'));
   });
 

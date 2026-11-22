@@ -31,6 +31,7 @@ export const staffTabs = [
 ];
 
 export const historyStatuses = new Set(['returned', 'declined', 'cancelled']);
+export const ADMIN_USERNAME = 'adminpeminjaman';
 export const MAX_LOAN_DAYS = 14;
 export const MAX_ADVANCE_DAYS = 30;
 

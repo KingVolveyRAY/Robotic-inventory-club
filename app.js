@@ -1,5 +1,6 @@
 import express from 'express';
 import { createApp } from './src/app.js';
+import { configuredAdmin } from './src/auth.js';
 
 const gateway = express();
 gateway.disable('x-powered-by');
@@ -7,19 +8,16 @@ let startup;
 
 async function start() {
   const databaseUrl = process.env.DATABASE_URL;
-  const email = process.env.ROBOLAB_ADMIN_EMAIL;
-  const password = process.env.ROBOLAB_ADMIN_PASSWORD;
   const catalogOnly = process.env.ROBOLAB_PUBLIC_CATALOG === '1';
   if (catalogOnly) return createApp({ databasePath: ':memory:', sampleInventory: true, catalogOnly });
   if (!databaseUrl) throw new Error('DATABASE_URL is required on Vercel.');
-  if (Boolean(email) !== Boolean(password)) throw new Error('Configure both admin variables together.');
 
   return createApp({
     databaseUrl,
     secureCookies: true,
     proxyHops: 1,
     sampleInventory: process.env.ROBOLAB_SAMPLE_INVENTORY === '1',
-    admin: email && password ? { email, password } : undefined,
+    admin: configuredAdmin(process.env),
   });
 }
 

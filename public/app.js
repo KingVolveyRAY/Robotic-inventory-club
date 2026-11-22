@@ -67,11 +67,11 @@ if (loanForm) {
   syncDates();
 }
 
-for (const button of document.querySelectorAll('[data-demo-email]')) {
+for (const button of document.querySelectorAll('[data-demo-login]')) {
   button.hidden = false;
   button.addEventListener('click', () => {
     const form = document.getElementById('auth-form');
-    form.elements.email.value = button.dataset.demoEmail;
+    form.elements.login.value = button.dataset.demoLogin;
     form.elements.password.value = button.dataset.demoPassword;
     form.querySelector('button[type="submit"]').focus();
   });

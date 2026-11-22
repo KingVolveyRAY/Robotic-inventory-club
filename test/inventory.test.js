@@ -207,3 +207,42 @@ test('public catalog does not allow account access or loan submissions', async (
     await site.stop();
   }
 });
+
+test('admin username works and password revisions revoke sessions without resetting on an older deploy', async (t) => {
+  const file = await tempDatabase(t);
+  const email = 'pengurus-utama@example.test';
+  const current = { email, password: 'Testing-Original-Admin-123!' };
+  const next = { email, password: 'Testing-New-Admin-Passphrase!', passwordRevision: 1 };
+  const identifier = { login: '  ADMINPEMINJAMAN  ' };
+
+  const oldSite = await startSite(file, { admin: current });
+  try {
+    const prior = new Client(oldSite);
+    assert.equal((await prior.request('/masuk')).status, 200);
+    assert.equal((await prior.post('/masuk', { ...identifier, password: current.password })).location, '/admin');
+    assert.equal((await prior.request('/admin')).status, 200);
+
+    const newSite = await startSite(file, { admin: next });
+    try {
+      assert.equal((await prior.request('/admin')).location, '/masuk');
+      await prior.request('/masuk');
+      assert.equal((await prior.post('/masuk', { ...identifier, password: current.password })).status, 401);
+
+      const newSession = new Client(newSite);
+      await newSession.request('/masuk');
+      assert.equal((await newSession.post('/masuk', { ...identifier, password: next.password })).location, '/admin');
+      const staleSite = await startSite(file, { admin: current });
+      try {
+        assert.equal((await newSession.request('/admin')).status, 200);
+        const staleClient = new Client(staleSite);
+        assert.equal((await staleClient.login(next)).location, '/admin');
+      } finally {
+        await staleSite.stop();
+      }
+    } finally {
+      await newSite.stop();
+    }
+  } finally {
+    await oldSite.stop();
+  }
+});

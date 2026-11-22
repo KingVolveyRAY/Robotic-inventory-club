@@ -8,6 +8,21 @@ const dummyHash = '00'.repeat(16) + ':' + '00'.repeat(64);
 const hour = 60 * 60 * 1000;
 const sessionHash = (token) => createHash('sha256').update(token).digest('hex');
 
+export function configuredAdmin(environment) {
+  const email = environment.ROBOLAB_ADMIN_EMAIL;
+  const password = environment.ROBOLAB_ADMIN_PASSWORD;
+  const revision = environment.ROBOLAB_ADMIN_PASSWORD_REVISION;
+
+  if (!email && !password && !revision) return undefined;
+  if (!email || !password) {
+    throw new Error('Isi ROBOLAB_ADMIN_EMAIL dan ROBOLAB_ADMIN_PASSWORD bersama-sama.');
+  }
+  if (revision && !/^[1-9]\d{0,8}$/.test(revision)) {
+    throw new Error('ROBOLAB_ADMIN_PASSWORD_REVISION harus bilangan bulat antara 1 dan 999999999.');
+  }
+  return { email, password, passwordRevision: Number(revision || 0) };
+}
+
 export function validPassword(password, minLength) {
   return typeof password === 'string' && password.trim().length >= minLength &&
     Buffer.byteLength(password, 'utf8') <= 128;
@@ -38,16 +53,19 @@ export function createSessions(inventory, secure) {
     return session ? { ...session, hash } : null;
   }
 
-  async function start(res, previous, userId = null) {
+  async function start(res, previous, userId = null, verifiedPasswordHash) {
     const token = randomBytes(32).toString('hex');
     const csrf = randomBytes(32).toString('hex');
     const now = Date.now();
     const maxAge = userId ? 7 * 24 * hour : hour;
-    await inventory.transaction(async (database) => {
+    const created = await inventory.transaction(async (database) => {
+      if (verifiedPasswordHash && !await database.passwordIsCurrent(userId, verifiedPasswordHash)) return false;
       await database.expireSessions(now);
       if (previous) await database.deleteSession(previous.hash);
       await database.storeSession(sessionHash(token), userId, csrf, now + maxAge);
+      return true;
     });
+    if (!created) return null;
     res.cookie(name, token, { ...options, maxAge });
     return csrf;
   }

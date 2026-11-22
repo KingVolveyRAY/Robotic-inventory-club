@@ -15,9 +15,9 @@
           <% for (const [role, account] of Object.entries(demoAccounts)) { %>
             <div>
               <span><strong><%= role === 'admin' ? 'Pengurus' : 'Anggota' %></strong></span>
-              <small><%= account.email %></small>
+              <small><%= (account.username ?? account.email) %></small>
               <small><%= account.password %></small>
-              <button type="button" class="button button-small button-secondary" data-demo-email="<%= account.email %>" data-demo-password="<%= account.password %>" hidden>Isi formulir</button>
+              <button type="button" class="button button-small button-secondary" data-demo-login="<%= (account.username ?? account.email) %>" data-demo-password="<%= account.password %>" hidden>Isi formulir</button>
             </div>
           <% } %>
         </div>

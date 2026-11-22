@@ -6,11 +6,16 @@
       <span>Nama lengkap</span>
       <input type="text" name="name" value="<%= name %>" minlength="2" maxlength="80" required autocomplete="name">
     </label>
+    <label class="field">
+      <span>Email</span>
+      <input type="email" name="email" value="<%= email %>" maxlength="254" required autocomplete="email">
+    </label>
+  <% } else { %>
+    <label class="field">
+      <span>Email atau nama pengguna</span>
+      <input type="text" name="login" value="<%= login %>" maxlength="254" required autocomplete="username" autocapitalize="none" spellcheck="false">
+    </label>
   <% } %>
-  <label class="field">
-    <span>Email</span>
-    <input type="email" name="email" value="<%= email %>" maxlength="254" required autocomplete="email">
-  </label>
   <label class="field">
     <span>Kata sandi</span>
     <input type="password" name="password" <%= isRegister ? 'minlength=10' : '' %> maxlength="128" required autocomplete="<%= isRegister ? 'new-password' : 'current-password' %>">
