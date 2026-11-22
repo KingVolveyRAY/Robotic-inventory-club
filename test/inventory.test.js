@@ -24,7 +24,7 @@ async function startSite(databasePath, config) {
       await new Promise((resolve, reject) => {
         server.close((error) => error ? reject(error) : resolve());
       });
-      close();
+      await close();
     },
   };
 }
@@ -185,6 +185,24 @@ test('club mode starts empty and uses configured admin and secure sessions', asy
     assert.equal((await client.request('/admin')).status, 200);
     assert.equal((await client.post('/keluar')).status, 303);
     assert.equal((await client.request('/admin')).location, '/masuk');
+  } finally {
+    await site.stop();
+  }
+});
+
+test('public catalog does not allow account access or loan submissions', async (t) => {
+  const site = await startSite(await tempDatabase(t), { sampleInventory: true, catalogOnly: true });
+  try {
+    const guest = new Client(site);
+    const catalog = await guest.request('/');
+    assert.match(catalog.html, /Pratinjau katalog/);
+    assert.match(catalog.html, /Arduino Uno R3/);
+    assert.doesNotMatch(catalog.html, /href="\/masuk"/);
+    assert.equal((await guest.request('/panduan')).status, 200);
+    assert.equal((await guest.request('/alat/1')).status, 200);
+    assert.equal((await guest.request('/daftar')).status, 404);
+    assert.equal((await guest.request('/admin')).status, 404);
+    assert.equal((await guest.request('/alat/1/pinjam', { quantity: '1' })).status, 404);
   } finally {
     await site.stop();
   }

@@ -33,20 +33,27 @@ const demoEquipment = [
   },
 ];
 
-export async function prepareData(inventory, { demo, admin }) {
+export async function prepareData(inventory, { demo, admin, sampleInventory }) {
   const modeKey = demo ? 'mode:demo' : 'mode:live';
   const otherMode = demo ? 'mode:live' : 'mode:demo';
-  inventory.transaction(() => {
-    if (inventory.hasMetadata(otherMode)) {
+  await inventory.transaction(async (database) => {
+    if (await database.hasMetadata(otherMode)) {
       throw new Error('Gunakan database terpisah untuk mode demo dan inventaris klub.');
     }
-    if (!inventory.hasMetadata(modeKey)) inventory.setMetadata(modeKey, '1');
+    if (!await database.hasMetadata(modeKey)) await database.setMetadata(modeKey, '1');
   });
 
   if (demo) {
     await seedDemo(inventory);
-  } else if (admin) {
-    await seedAdmin(inventory, admin);
+  } else {
+    if (admin) await seedAdmin(inventory, admin);
+    if (sampleInventory) {
+      await inventory.transaction(async (database) => {
+        if (await database.hasMetadata('sample-equipment-seeded')) return;
+        if ((await database.inventory()).length === 0) await addSamples(database);
+        await database.setMetadata('sample-equipment-seeded', '1');
+      });
+    }
   }
 }
 
@@ -56,31 +63,31 @@ async function seedAdmin(inventory, admin) {
     throw new Error('Isi email pengurus yang valid dan kata sandi pengurus minimal 12 karakter (maksimal 128 byte).');
   }
 
-  const existing = inventory.userByEmail(email);
+  const existing = await inventory.userByEmail(email);
   if (existing?.role === 'admin') return;
   const hash = await hashPassword(admin.password);
-  inventory.transaction(() => {
-    const user = inventory.userByEmail(email);
+  await inventory.transaction(async (database) => {
+    const user = await database.userByEmail(email);
     if (user?.role === 'member') {
       throw new Error('Email pengurus awal sudah terdaftar sebagai anggota. Gunakan email lain.');
     }
-    if (!user) inventory.createUser('Pengurus RoboLab', email, hash, 'admin');
+    if (!user) await database.createUser('Pengurus RoboLab', email, hash, 'admin');
   });
 }
 
 async function seedDemo(inventory) {
-  if (inventory.hasMetadata('demo-seeded')) return;
+  if (await inventory.hasMetadata('demo-seeded')) return;
 
   const [memberHash, adminHash] = await Promise.all([
     hashPassword(demoAccounts.member.password),
     hashPassword(demoAccounts.admin.password),
   ]);
 
-  inventory.transaction(() => {
-    if (inventory.hasMetadata('demo-seeded')) return;
-    const member = inventory.createUser(demoAccounts.member.name, demoAccounts.member.email, memberHash, 'member');
-    inventory.createUser(demoAccounts.admin.name, demoAccounts.admin.email, adminHash, 'admin');
-    const ids = demoEquipment.map((item) => inventory.addEquipment({ ...item, active: 1 }));
+  await inventory.transaction(async (database) => {
+    if (await database.hasMetadata('demo-seeded')) return;
+    const member = await database.createUser(demoAccounts.member.name, demoAccounts.member.email, memberHash, 'member');
+    await database.createUser(demoAccounts.admin.name, demoAccounts.admin.email, adminHash, 'admin');
+    const ids = await addSamples(database);
     const date = clubDate();
     const examples = [
       { index: 0, quantity: 2, from: -2, to: 5, status: 'borrowed', purpose: 'Prototipe robot pengikut garis' },
@@ -89,13 +96,21 @@ async function seedDemo(inventory) {
       { index: 4, quantity: 1, from: 0, to: 4, status: 'pending', purpose: 'Memeriksa rangkaian catu daya' },
     ];
     for (const loan of examples) {
-      inventory.addLoan(ids[loan.index], member, {
+      await database.addLoan(ids[loan.index], member, {
         quantity: loan.quantity,
         start: shiftDate(date, loan.from),
         due: shiftDate(date, loan.to),
         purpose: loan.purpose,
       }, loan.status);
     }
-    inventory.setMetadata('demo-seeded', '1');
+    await database.setMetadata('demo-seeded', '1');
   });
+}
+
+async function addSamples(database) {
+  const ids = [];
+  for (const item of demoEquipment) {
+    ids.push(await database.addEquipment({ ...item, active: 1 }));
+  }
+  return ids;
 }

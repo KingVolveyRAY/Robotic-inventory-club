@@ -1,14 +1,10 @@
-import { readFileSync } from 'node:fs';
+import * as lucide from 'lucide-static/dist/esm/lucide-static.mjs';
 import { categories, categoryById } from './domain.js';
 
-const iconCache = new Map();
-
 export function icon(name, size = 20) {
-  if (!iconCache.has(name)) {
-    const file = new URL('../node_modules/lucide-static/icons/' + name + '.svg', import.meta.url);
-    iconCache.set(name, readFileSync(file, 'utf8').replace('<svg', '<svg aria-hidden="true" focusable="false"'));
-  }
-  return iconCache.get(name).replace('width="24"', `width="${size}"`).replace('height="24"', `height="${size}"`);
+  const symbol = name.split('-').map((word) => word[0].toUpperCase() + word.slice(1)).join('');
+  return lucide[symbol].replace('<svg', '<svg aria-hidden="true" focusable="false"')
+    .replace('width="24"', `width="${size}"`).replace('height="24"', `height="${size}"`);
 }
 
 export const sorts = [

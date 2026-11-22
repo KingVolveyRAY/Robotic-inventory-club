@@ -1,6 +1,9 @@
 <%- include('partials/head', { title: 'Katalog Peralatan Robotik' }) %>
 <%- include('partials/header') %>
 <main id="konten" class="shell catalog-main">
+  <% if (catalogOnly) { %>
+    <p class="catalog-preview">Pratinjau inventaris contoh. Pencarian, filter, dan detail alat bisa dicoba.</p>
+  <% } %>
   <section class="hero" aria-labelledby="hero-title">
     <img class="hero-photo" src="/images/rover-lab.webp" alt="" width="1740" height="550" fetchpriority="high">
     <div class="hero-shade"></div>

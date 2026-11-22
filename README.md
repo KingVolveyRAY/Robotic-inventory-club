@@ -39,3 +39,15 @@ npm test
 ```
 
 Pengujian memakai database sementara dan mencakup pemisahan mode demo, hak akses, konsistensi stok, serta siklus pinjam dan kembali.
+
+## Deploy di Vercel
+
+Impor repositori di Vercel dengan preset **Express** dan runtime Node.js 24. Hubungkan database PostgreSQL yang dapat diakses lewat TLS, misalnya Neon. Tambahkan variabel berikut di **Settings → Environment Variables** sebelum deploy.
+
+- `DATABASE_URL` berisi URL koneksi PostgreSQL. Gunakan database terpisah untuk Production dan Preview.
+- `ROBOLAB_ADMIN_EMAIL` dan `ROBOLAB_ADMIN_PASSWORD` membuat akun pengurus awal. Gunakan nama pengguna dan kata sandi milik klub.
+- `ROBOLAB_SAMPLE_INVENTORY=1` mengisi enam alat contoh sekali pada database baru. Opsi ini cocok untuk database khusus review.
+
+Jalankan deployment ulang setelah mengubah variabel. Buka `/healthz` untuk memeriksa koneksi database dan buka halaman utama untuk melihat katalog. `npm run demo` tetap memakai SQLite lokal dan dua akun demo. Akun demo lokal tidak dibuat pada Vercel.
+
+Untuk pratinjau publik katalog tanpa akun dan penyimpanan permanen, gunakan `ROBOLAB_PUBLIC_CATALOG=1`. Hapus opsi itu saat mengaktifkan peminjaman dengan PostgreSQL.

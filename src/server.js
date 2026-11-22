@@ -21,7 +21,8 @@ try {
     : process.env.ROBOLAB_DATABASE_PATH || '.data/robolab.sqlite');
 
   const { app, close } = await createApp({
-    databasePath, demo, proxyHops,
+    databasePath, databaseUrl: demo ? undefined : process.env.DATABASE_URL, demo, proxyHops,
+    sampleInventory: process.env.ROBOLAB_SAMPLE_INVENTORY === '1',
     admin: email && password ? { email, password } : undefined,
     secureCookies: process.env.ROBOLAB_SECURE_COOKIES === '1',
   });
@@ -30,13 +31,16 @@ try {
   try {
     await once(server, 'listening');
   } catch (error) {
-    close();
+    await close();
     throw error;
   }
   console.log(`RoboLab (${demo ? 'demo' : 'inventaris klub'}) berjalan di http://${host}:${port}`);
 
   function shutdown() {
-    server.close(() => close());
+    server.close(() => close().catch((error) => {
+      console.error('Gagal menutup database:', error.name);
+      process.exitCode = 1;
+    }));
   }
 
   process.once('SIGTERM', shutdown);

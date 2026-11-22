@@ -3,6 +3,8 @@
     <%- include('brand') %>
     <% if (demo) { %>
       <span class="footer-note">Mode demo · inventaris contoh</span>
+    <% } else if (sampleInventory) { %>
+      <span class="footer-note">Pratinjau · inventaris contoh</span>
     <% } %>
     <nav aria-label="Tautan footer">
       <a href="/#katalog">Katalog</a>

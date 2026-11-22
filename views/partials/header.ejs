@@ -3,11 +3,15 @@
     <%- include('brand') %>
     <nav class="site-nav" aria-label="Navigasi utama">
       <a href="/" <%= page === 'catalog' ? 'aria-current=page' : '' %>>Katalog</a>
-      <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>>Peminjaman Saya</a>
+      <% if (!catalogOnly) { %>
+        <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>>Peminjaman Saya</a>
+      <% } %>
       <a href="/panduan" <%= page === 'guide' ? 'aria-current=page' : '' %>>Panduan</a>
     </nav>
     <div class="header-account">
-      <% if (!user) { %>
+      <% if (catalogOnly) { %>
+        <span class="badge badge-blue">Pratinjau katalog</span>
+      <% } else if (!user) { %>
         <a href="/masuk" class="button button-small button-secondary header-login"><%- icon('log-in', 17) %> Masuk</a>
       <% } else { %>
         <details class="account-menu">

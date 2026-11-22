@@ -14,11 +14,6 @@ import { demoAccounts, prepareData } from './seed.js';
 
 const file = (path) => fileURLToPath(new URL(path, import.meta.url));
 const publicPath = file('../public');
-const fonts = new Map([
-  ['plus-jakarta-sans', file('../node_modules/@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2')],
-  ['space-grotesk', file('../node_modules/@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2')],
-]);
-
 const feedback = new Map([
   ['diajukan', 'Pengajuan terkirim. Kamu bisa memantau statusnya di sini.'],
   ['cancelled', 'Peminjaman dibatalkan.'],
@@ -59,12 +54,15 @@ function formValues(body, keys) {
   return Object.fromEntries(keys.map((key) => [key, asText(body[key]).slice(0, 500)]));
 }
 
-export async function createApp({ databasePath, demo = false, admin, secureCookies = false, proxyHops = 0 }) {
-  const inventory = openInventory(databasePath);
+export async function createApp({
+  databasePath, databaseUrl, demo = false, sampleInventory = false, catalogOnly = false, admin,
+  secureCookies = false, proxyHops = 0,
+}) {
+  const inventory = await openInventory({ databasePath, databaseUrl });
   try {
-    await prepareData(inventory, { demo, admin });
+    await prepareData(inventory, { demo, admin, sampleInventory });
   } catch (error) {
-    inventory.close();
+    await inventory.close();
     throw error;
   }
 
@@ -77,7 +75,7 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
   app.set('view engine', 'ejs');
 
   Object.assign(app.locals, {
-    icon, initials, categories, categoryById, statuses, sorts, demo, demoAccounts,
+    icon, initials, categories, categoryById, statuses, sorts, demo, demoAccounts, sampleInventory, catalogOnly,
     formatDate, maxLoanDays: MAX_LOAN_DAYS, maxAdvanceDays: MAX_ADVANCE_DAYS,
     user: null, page: '',
   });
@@ -94,18 +92,13 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     },
   }));
   app.use(express.static(publicPath, { index: false, maxAge: '1h' }));
-  app.get('/font/:name.woff2', (req, res, next) => {
-    const path = fonts.get(req.params.name);
-    if (!path) return next();
-    res.sendFile(path, { maxAge: '7d' });
-  });
-  app.get('/healthz', (_req, res) => {
-    inventory.ready();
+  app.get('/healthz', async (_req, res) => {
+    await inventory.ready();
     res.json({ ok: true });
   });
 
-  app.use((req, res, next) => {
-    req.session = sessions.read(req);
+  app.use(async (req, res, next) => {
+    req.session = await sessions.read(req);
     const user = req.session?.user_id
       ? { id: req.session.user_id, name: req.session.name, role: req.session.role }
       : null;
@@ -120,6 +113,15 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     res.set('Cache-Control', 'no-store');
     next();
   });
+  if (catalogOnly) {
+    app.use((req, _res, next) => {
+      const catalogPage = req.path === '/' || req.path === '/panduan' || /^\/alat\/[1-9]\d{0,9}$/.test(req.path);
+      if (!catalogPage || !['GET', 'HEAD'].includes(req.method)) {
+        throw new AppError(404, 'Pratinjau ini menampilkan katalog dan panduan peminjaman.');
+      }
+      next();
+    });
+  }
   app.use(express.urlencoded({ extended: false, limit: '16kb', parameterLimit: 24 }));
   app.post(/.*/, (req, _res, next) => {
     if (!checkCsrf(req.session, req.body?._csrf)) {
@@ -128,8 +130,8 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     next();
   });
 
-  function showAuth(req, res, view, values, error = '', status = 200) {
-    if (!req.session) res.locals.csrf = sessions.start(res, null);
+  async function showAuth(req, res, view, values, error = '', status = 200) {
+    if (!req.session) res.locals.csrf = await sessions.start(res, null);
     const nextPath = safeNext(values.lanjut);
     const suffix = nextPath ? '?lanjut=' + encodeURIComponent(nextPath) : '';
     res.status(status).render(view, {
@@ -149,32 +151,32 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     handler: (_req, _res, next) => next(new AppError(429, 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.')),
   });
 
-  app.get('/', (req, res) => {
-    res.render('catalog', { ...catalogData(inventory.catalog(), req.query), page: 'catalog' });
+  app.get('/', async (req, res) => {
+    res.render('catalog', { ...catalogData(await inventory.catalog(), req.query), page: 'catalog' });
   });
 
   app.get('/panduan', (_req, res) => res.render('guide', { page: 'guide' }));
 
-  app.get('/masuk', (req, res) => {
+  app.get('/masuk', async (req, res) => {
     if (res.locals.user) return res.redirect(safeNext(req.query.lanjut) || (res.locals.user.role === 'admin' ? '/admin' : '/peminjaman'));
-    showAuth(req, res, 'login', req.query);
+    await showAuth(req, res, 'login', req.query);
   });
 
   app.post('/masuk', authLimit, async (req, res) => {
     if (res.locals.user) return res.redirect(303, '/peminjaman');
     const email = normalizeEmail(req.body.email);
-    const account = validEmail(email) ? inventory.userByEmail(email) : undefined;
+    const account = validEmail(email) ? await inventory.userByEmail(email) : undefined;
     const matches = await matchesPassword(req.body.password, account?.password_hash);
     if (!account || !matches) {
       return showAuth(req, res, 'login', req.body, 'Email atau kata sandi salah.', 401);
     }
-    sessions.start(res, req.session, account.id);
+    await sessions.start(res, req.session, account.id);
     res.redirect(303, safeNext(req.body.lanjut) || (account.role === 'admin' ? '/admin' : '/peminjaman'));
   });
 
-  app.get('/daftar', (req, res) => {
+  app.get('/daftar', async (req, res) => {
     if (res.locals.user) return res.redirect(safeNext(req.query.lanjut) || '/peminjaman');
-    showAuth(req, res, 'register', req.query);
+    await showAuth(req, res, 'register', req.query);
   });
 
   app.post('/daftar', authLimit, async (req, res) => {
@@ -186,23 +188,23 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
       return showAuth(req, res, 'register', req.body, 'Periksa nama, alamat email, dan panjang kata sandi.', 422);
     }
     const passwordHash = await hashPassword(password);
-    const userId = inventory.transaction(() => {
-      if (inventory.userByEmail(email)) return null;
-      return inventory.createUser(name, email, passwordHash, 'member');
+    const userId = await inventory.transaction(async (database) => {
+      if (await database.userByEmail(email)) return null;
+      return database.createUser(name, email, passwordHash, 'member');
     });
     if (!userId) return showAuth(req, res, 'register', req.body, 'Email sudah terdaftar. Silakan masuk.', 409);
 
-    sessions.start(res, req.session, userId);
+    await sessions.start(res, req.session, userId);
     res.redirect(303, safeNext(req.body.lanjut) || '/peminjaman');
   });
 
-  app.post('/keluar', (req, res) => {
-    sessions.end(res, req.session);
+  app.post('/keluar', async (req, res) => {
+    await sessions.end(res, req.session);
     res.redirect(303, '/');
   });
 
-  function publicEquipment(id) {
-    const item = inventory.equipment(id);
+  async function publicEquipment(id) {
+    const item = await inventory.equipment(id);
     if (!item.active) throw new AppError(404, 'Alat ini tidak tersedia di katalog.');
     return item;
   }
@@ -219,17 +221,17 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     });
   }
 
-  app.get('/alat/:id', (req, res) => renderDetail(res, publicEquipment(recordId(req.params.id))));
+  app.get('/alat/:id', async (req, res) => renderDetail(res, await publicEquipment(recordId(req.params.id))));
 
-  app.post('/alat/:id/pinjam', requireUser, (req, res) => {
+  app.post('/alat/:id/pinjam', requireUser, async (req, res) => {
     const id = recordId(req.params.id);
     try {
       const form = validateLoan(req.body, res.locals.today);
-      inventory.requestLoan(id, res.locals.user.id, form);
+      await inventory.requestLoan(id, res.locals.user.id, form);
       res.redirect(303, '/peminjaman?hasil=diajukan');
     } catch (error) {
       if (!(error instanceof AppError) || error.status === 404) throw error;
-      renderDetail(res, publicEquipment(id), {
+      renderDetail(res, await publicEquipment(id), {
         values: formValues(req.body, ['quantity', 'start', 'due', 'purpose']),
         error: error.message,
         status: error.status,
@@ -237,22 +239,22 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     }
   });
 
-  app.get('/peminjaman', requireUser, (req, res) => {
-    const allLoans = inventory.memberLoans(res.locals.user.id);
+  app.get('/peminjaman', requireUser, async (req, res) => {
+    const allLoans = await inventory.memberLoans(res.locals.user.id);
     const filter = filterValue(req.query.status, memberTabs);
     const loans = allLoans.filter((loan) => filter === 'all' ||
       (filter === 'history') === historyStatuses.has(loan.status));
     res.render('loans', { page: 'loans', loans, filter, tabs: memberTabs });
   });
 
-  app.post('/peminjaman/:id/batal', requireUser, (req, res) => {
-    inventory.cancelLoan(recordId(req.params.id), res.locals.user.id);
+  app.post('/peminjaman/:id/batal', requireUser, async (req, res) => {
+    await inventory.cancelLoan(recordId(req.params.id), res.locals.user.id);
     res.redirect(303, '/peminjaman?hasil=cancelled');
   });
 
-  app.get('/admin', requireAdmin, (req, res) => {
+  app.get('/admin', requireAdmin, async (req, res) => {
     const filter = filterValue(req.query.status, staffTabs);
-    const allLoans = inventory.adminLoans();
+    const allLoans = await inventory.adminLoans();
     const counts = Object.fromEntries(staffTabs.map(({ id }) => [
       id, allLoans.filter((loan) => id === 'history' ? historyStatuses.has(loan.status) : loan.status === id).length,
     ]));
@@ -260,15 +262,15 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     res.render('admin', { page: 'admin', filter, loans, counts, tabs: staffTabs });
   });
 
-  app.post('/admin/peminjaman/:id/tindakan', requireAdmin, (req, res) => {
+  app.post('/admin/peminjaman/:id/tindakan', requireAdmin, async (req, res) => {
     const action = asText(req.body.action);
-    const result = inventory.advanceLoan(recordId(req.params.id), action, res.locals.today);
+    const result = await inventory.advanceLoan(recordId(req.params.id), action, res.locals.today);
     const nextTab = staffTabs.some((tab) => tab.id === result) ? result : 'history';
     res.redirect(303, `/admin?status=${nextTab}&hasil=${result}`);
   });
 
-  app.get('/admin/alat', requireAdmin, (_req, res) => {
-    res.render('admin-inventory', { page: 'admin', items: inventory.inventory() });
+  app.get('/admin/alat', requireAdmin, async (_req, res) => {
+    res.render('admin-inventory', { page: 'admin', items: await inventory.inventory() });
   });
 
   function showInventoryForm(res, item, values = item, error = '', status = 200) {
@@ -279,16 +281,16 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     showInventoryForm(res, null, { name: '', category: '', description: '', total: '', active: 1 });
   });
 
-  app.get('/admin/alat/:id', requireAdmin, (req, res) => {
-    showInventoryForm(res, inventory.equipment(recordId(req.params.id)));
+  app.get('/admin/alat/:id', requireAdmin, async (req, res) => {
+    showInventoryForm(res, await inventory.equipment(recordId(req.params.id)));
   });
 
-  app.post(['/admin/alat', '/admin/alat/:id'], requireAdmin, (req, res) => {
-    const item = req.params.id ? inventory.equipment(recordId(req.params.id)) : null;
+  app.post(['/admin/alat', '/admin/alat/:id'], requireAdmin, async (req, res) => {
+    const item = req.params.id ? await inventory.equipment(recordId(req.params.id)) : null;
     try {
       const form = validateEquipment(req.body);
-      if (item) inventory.updateEquipment(item.id, form);
-      else inventory.addEquipment(form);
+      if (item) await inventory.updateEquipment(item.id, form);
+      else await inventory.addEquipment(form);
       res.redirect(303, '/admin/alat?hasil=disimpan');
     } catch (error) {
       if (!(error instanceof AppError)) throw error;
@@ -316,5 +318,5 @@ export async function createApp({ databasePath, demo = false, admin, secureCooki
     res.status(status).render('error', { status, message, back });
   });
 
-  return { app, close: () => inventory.close() };
+  return { app, close: inventory.close };
 }

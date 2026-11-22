@@ -23,7 +23,10 @@
       <span class="page-icon"><%- icon('clipboard-list', 24) %></span>
       <h2>Ajukan peminjaman</h2>
       <%- include('partials/feedback') %>
-      <% if (item.available < 1) { %>
+      <% if (catalogOnly) { %>
+        <p class="page-description">Katalog ini berisi inventaris contoh. Pengajuan online memerlukan koneksi database klub.</p>
+        <a class="button button-secondary" href="/panduan">Baca panduan <%- icon('arrow-right', 16) %></a>
+      <% } else if (item.available < 1) { %>
         <p class="page-description">Seluruh unit sedang dipesan, dipinjam, atau stok alat ini sedang kosong.</p>
         <a class="button button-secondary" href="/#katalog">Lihat alat lain <%- icon('arrow-right', 16) %></a>
       <% } else if (!user) { %>

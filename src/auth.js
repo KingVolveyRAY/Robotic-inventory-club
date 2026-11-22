@@ -30,30 +30,30 @@ export function createSessions(inventory, secure) {
   const name = secure ? '__Host-robolab_session' : 'robolab_session';
   const options = { path: '/', httpOnly: true, secure, sameSite: 'lax' };
 
-  function read(req) {
+  async function read(req) {
     const token = parseCookie(req.headers.cookie ?? '')[name];
     if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
     const hash = sessionHash(token);
-    const session = inventory.findSession(hash, Date.now());
+    const session = await inventory.findSession(hash, Date.now());
     return session ? { ...session, hash } : null;
   }
 
-  function start(res, previous, userId = null) {
+  async function start(res, previous, userId = null) {
     const token = randomBytes(32).toString('hex');
     const csrf = randomBytes(32).toString('hex');
     const now = Date.now();
     const maxAge = userId ? 7 * 24 * hour : hour;
-    inventory.transaction(() => {
-      inventory.expireSessions(now);
-      if (previous) inventory.deleteSession(previous.hash);
-      inventory.storeSession(sessionHash(token), userId, csrf, now + maxAge);
+    await inventory.transaction(async (database) => {
+      await database.expireSessions(now);
+      if (previous) await database.deleteSession(previous.hash);
+      await database.storeSession(sessionHash(token), userId, csrf, now + maxAge);
     });
     res.cookie(name, token, { ...options, maxAge });
     return csrf;
   }
 
-  function end(res, session) {
-    if (session) inventory.deleteSession(session.hash);
+  async function end(res, session) {
+    if (session) await inventory.deleteSession(session.hash);
     res.clearCookie(name, options);
   }
 
