@@ -20,7 +20,7 @@
   <% } else { %>
     <div class="loan-list">
       <% for (const loan of loans) { %>
-        <article class="panel loan-card staff-loan" id="pinjaman-<%= loan.id %>">
+        <article class="panel loan-card staff-loan" id="pinjaman-<%= loan.id %>" data-reveal>
           <header class="loan-card-header">
             <div>
               <span class="loan-reference">#<%= loan.id %> · <%= categoryById[loan.category].name %></span>
@@ -31,7 +31,7 @@
           </header>
           <%- include('partials/loan-meta', { loan }) %>
           <% if (loan.status === 'pending' || loan.status === 'approved' || loan.status === 'borrowed') { %>
-            <form class="loan-actions" action="/admin/peminjaman/<%= loan.id %>/tindakan" method="post">
+            <form class="loan-actions" action="/admin/peminjaman/<%= loan.id %>/tindakan" method="post" data-busy-label="Memproses…">
               <%- include('partials/csrf') %>
               <% if (loan.status === 'pending') { %>
                 <% if (loan.due_date < today) { %>

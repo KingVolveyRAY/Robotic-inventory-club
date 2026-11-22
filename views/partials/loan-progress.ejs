@@ -1,0 +1,14 @@
+<% const phases = [
+  { status: 'pending', label: 'Diajukan' },
+  { status: 'approved', label: 'Disetujui' },
+  { status: 'borrowed', label: 'Diambil' },
+  { status: 'returned', label: 'Kembali' },
+]; %>
+<% const currentPhase = phases.findIndex((phase) => phase.status === loan.status); %>
+<% if (currentPhase >= 0) { %>
+  <ol class="loan-progress" aria-label="Tahap peminjaman">
+    <% for (const [index, phase] of phases.entries()) { %>
+      <li <%= index < currentPhase ? 'class=is-complete' : '' %> <%= index === currentPhase ? 'aria-current=step' : '' %>><%= phase.label %></li>
+    <% } %>
+  </ol>
+<% } %>

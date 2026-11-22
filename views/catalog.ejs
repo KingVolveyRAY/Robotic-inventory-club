@@ -5,22 +5,23 @@
     <p class="catalog-preview">Pratinjau inventaris contoh. Pencarian, filter, dan detail alat bisa dicoba.</p>
   <% } %>
   <section class="hero" aria-labelledby="hero-title">
-    <img class="hero-photo" src="/images/rover-lab.webp" alt="" width="1740" height="550" fetchpriority="high">
-    <div class="hero-shade"></div>
     <div class="hero-copy">
       <h1 id="hero-title">Peralatan robotik,<br><span>siap kamu pinjam.</span></h1>
       <p>Dari mikrokontroler hingga kit robotik, temukan alat yang kamu butuhkan untuk proyek berikutnya.</p>
       <div class="hero-actions">
         <a class="button button-primary" href="#katalog">Jelajahi alat <%- icon('arrow-down', 17) %></a>
-        <a class="button button-on-dark" href="/panduan">Cara peminjaman <%- icon('arrow-up-right', 17) %></a>
+        <a class="button button-secondary" href="/panduan">Cara peminjaman <%- icon('arrow-up-right', 17) %></a>
       </div>
+    </div>
+    <div class="hero-media">
+      <img class="hero-photo" src="/images/rover-lab.webp" alt="Robot rover empat roda di meja klub" width="1740" height="550" fetchpriority="high">
     </div>
   </section>
 
   <section class="stats-grid" aria-label="Ringkasan inventaris">
     <% for (const stat of stats) { %>
-      <div class="stat">
-        <span class="stat-icon tone-<%= stat.tone %>"><%- icon(stat.icon, 23) %></span>
+      <div class="stat tone-<%= stat.tone %>">
+        <span class="stat-icon"><%- icon(stat.icon, 23) %></span>
         <dl class="stat-data">
           <dt><%= stat.name %></dt>
           <dd><%= stat.value.toLocaleString('id-ID') %></dd>
@@ -78,7 +79,7 @@
     <% } else { %>
       <div class="equipment-grid">
         <% for (const [index, item] of items.entries()) { %>
-          <article class="equipment-card">
+          <article class="equipment-card" data-reveal>
             <div class="card-media">
               <%- include('partials/equipment-image', { item, eager: index < 3 }) %>
               <%- include('partials/stock', { item }) %>

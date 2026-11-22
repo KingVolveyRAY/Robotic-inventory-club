@@ -1,18 +1,24 @@
-<header class="site-header">
+<header class="site-header" data-site-header>
   <div class="site-header-inner shell">
     <%- include('brand') %>
     <nav class="site-nav" aria-label="Navigasi utama">
-      <a href="/" <%= page === 'catalog' ? 'aria-current=page' : '' %>>Katalog</a>
+      <a href="/#katalog" <%= page === 'catalog' ? 'aria-current=page' : '' %>>
+        <%- icon('layout-grid', 17) %><span class="nav-label">Katalog</span>
+      </a>
       <% if (!catalogOnly) { %>
-        <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>>Peminjaman Saya</a>
+        <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>>
+          <%- icon('clipboard-list', 17) %><span class="nav-label nav-label-long">Peminjaman Saya</span><span class="nav-label-short" aria-hidden="true">Pinjaman</span>
+        </a>
       <% } %>
-      <a href="/panduan" <%= page === 'guide' ? 'aria-current=page' : '' %>>Panduan</a>
+      <a href="/panduan" <%= page === 'guide' ? 'aria-current=page' : '' %>>
+        <%- icon('book-open', 17) %><span class="nav-label">Panduan</span>
+      </a>
     </nav>
     <div class="header-account">
       <% if (catalogOnly) { %>
-        <span class="badge badge-blue">Pratinjau katalog</span>
+        <span class="badge badge-blue header-preview"><%- icon('eye', 16) %><span>Pratinjau katalog</span></span>
       <% } else if (!user) { %>
-        <a href="/masuk" class="button button-small button-secondary header-login"><%- icon('log-in', 17) %> Masuk</a>
+        <a href="/masuk" class="button button-small header-login"><%- icon('log-in', 17) %><span>Masuk</span></a>
       <% } else { %>
         <details class="account-menu">
           <summary>

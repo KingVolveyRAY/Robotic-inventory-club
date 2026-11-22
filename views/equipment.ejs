@@ -34,7 +34,7 @@
         <a class="button button-primary button-wide" href="/masuk?lanjut=<%= encodeURIComponent('/alat/' + item.id) %>">Masuk untuk meminjam <%- icon('arrow-right', 17) %></a>
       <% } else { %>
         <p class="page-description">Pilih jadwal dan jumlah alat. Pengurus akan meninjau pengajuanmu.</p>
-        <form class="form-stack" action="/alat/<%= item.id %>/pinjam" method="post" data-loan-days="<%= maxLoanDays %>">
+        <form class="form-stack" action="/alat/<%= item.id %>/pinjam" method="post" data-loan-days="<%= maxLoanDays %>" data-busy-label="Mengirim pengajuan…">
           <%- include('partials/csrf') %>
           <label class="field">
             <span>Jumlah unit</span>

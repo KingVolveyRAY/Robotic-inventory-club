@@ -1,3 +1,36 @@
+const siteHeader = document.querySelector('[data-site-header]');
+if (siteHeader) {
+  siteHeader.setAttribute('data-scroll-ready', '');
+  let framePending = false;
+  function updateHeader() {
+    framePending = false;
+    const threshold = siteHeader.hasAttribute('data-compact') ? 55 : 110;
+    siteHeader.toggleAttribute('data-compact', window.scrollY > threshold);
+  }
+
+  window.addEventListener('scroll', () => {
+    if (framePending) return;
+    framePending = true;
+    window.requestAnimationFrame(updateHeader);
+  }, { passive: true });
+  window.addEventListener('pageshow', updateHeader);
+  updateHeader();
+}
+
+if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      entry.target.classList.add('is-revealing');
+      observer.unobserve(entry.target);
+    }
+  }, { rootMargin: '0px 0px 10px' });
+
+  for (const item of document.querySelectorAll('[data-reveal]')) {
+    if (item.getBoundingClientRect().top >= window.innerHeight) observer.observe(item);
+  }
+}
+
 for (const select of document.querySelectorAll('[data-submit-on-change]')) {
   select.addEventListener('change', () => select.form.requestSubmit());
 }
@@ -44,7 +77,40 @@ if (accountMenu) {
   });
 }
 
+let activeSubmission;
+
 document.addEventListener('submit', (event) => {
-  const message = event.submitter?.dataset.confirm;
-  if (message && !window.confirm(message)) event.preventDefault();
+  if (event.defaultPrevented) return;
+  if (activeSubmission) {
+    event.preventDefault();
+    return;
+  }
+
+  const button = event.submitter;
+  const message = button?.dataset.confirm;
+  if (message && !window.confirm(message)) {
+    event.preventDefault();
+    return;
+  }
+
+  const label = event.target.dataset.busyLabel;
+  if (!label || !(button instanceof HTMLButtonElement)) return;
+
+  activeSubmission = { button, content: Array.from(button.childNodes) };
+  const spinner = document.createElement('span');
+  spinner.className = 'button-spinner';
+  spinner.setAttribute('aria-hidden', 'true');
+  button.replaceChildren(spinner, document.createTextNode(label));
+  // Keep the submitter enabled so its name and value are included in the request.
+  button.setAttribute('aria-busy', 'true');
+  button.setAttribute('aria-disabled', 'true');
+});
+
+window.addEventListener('pageshow', () => {
+  if (!activeSubmission) return;
+  const { button, content } = activeSubmission;
+  button.replaceChildren(...content);
+  button.removeAttribute('aria-busy');
+  button.removeAttribute('aria-disabled');
+  activeSubmission = undefined;
 });

@@ -20,7 +20,7 @@
   <% } else { %>
     <div class="loan-list">
       <% for (const loan of loans) { %>
-        <article class="panel loan-card" id="pinjaman-<%= loan.id %>">
+        <article class="panel loan-card" id="pinjaman-<%= loan.id %>" data-reveal>
           <header class="loan-card-header">
             <div class="loan-item">
               <div class="loan-thumbnail">
@@ -42,9 +42,10 @@
             </div>
             <%- include('partials/loan-badge', { loan }) %>
           </header>
+          <%- include('partials/loan-progress', { loan }) %>
           <%- include('partials/loan-meta', { loan }) %>
           <% if (loan.status === 'pending' || loan.status === 'approved') { %>
-            <form class="loan-actions" action="/peminjaman/<%= loan.id %>/batal" method="post">
+            <form class="loan-actions" action="/peminjaman/<%= loan.id %>/batal" method="post" data-busy-label="Memproses…">
               <%- include('partials/csrf') %>
               <button class="button button-small button-quiet-danger" type="submit" data-confirm="Batalkan peminjaman ini?">Batalkan pengajuan</button>
             </form>
