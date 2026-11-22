@@ -14,6 +14,19 @@ if (siteHeader) {
     window.requestAnimationFrame(updateHeader);
   }, { passive: true });
   window.addEventListener('pageshow', updateHeader);
+
+  function showTooltipsAgain() {
+    siteHeader.removeAttribute('data-tooltip-dismissed');
+  }
+
+  siteHeader.addEventListener('focusin', showTooltipsAgain);
+  siteHeader.addEventListener('pointerover', showTooltipsAgain);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && siteHeader.hasAttribute('data-compact')) {
+      siteHeader.setAttribute('data-tooltip-dismissed', '');
+    }
+  });
+
   updateHeader();
 }
 

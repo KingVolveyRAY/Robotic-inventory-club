@@ -1,7 +1,9 @@
-<a class="brand" href="/">
+<% const inHeader = typeof headerBrand !== 'undefined' && headerBrand; %>
+<a class="brand<%= inHeader ? ' dock-control' : '' %>" href="/">
   <span class="brand-icon"><%- icon('cpu', 24) %></span>
   <span class="brand-text">
     <strong>RoboLab</strong>
     <small>Inventaris Klub Robotik</small>
   </span>
+  <% if (inHeader) { %><span class="dock-tooltip" aria-hidden="true">Beranda RoboLab</span><% } %>
 </a>

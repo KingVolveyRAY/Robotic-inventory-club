@@ -1,31 +1,39 @@
-<header class="site-header" data-site-header>
+<% const navigation = [
+  { page: 'catalog', href: '/#katalog', icon: 'layout-grid', label: 'Katalog' },
+  { page: 'loans', href: '/peminjaman', icon: 'clipboard-list', label: 'Peminjaman Saya' },
+  { page: 'guide', href: '/panduan', icon: 'book-open', label: 'Panduan' },
+]; %>
+<header class="site-header" data-site-header <%= catalogOnly ? 'data-catalog-only' : '' %>>
   <div class="site-header-inner shell">
-    <%- include('brand') %>
+    <%- include('brand', { headerBrand: true }) %>
     <nav class="site-nav" aria-label="Navigasi utama">
-      <a href="/#katalog" <%= page === 'catalog' ? 'aria-current=page' : '' %>>
-        <%- icon('layout-grid', 17) %><span class="nav-label">Katalog</span>
-      </a>
-      <% if (!catalogOnly) { %>
-        <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>>
-          <%- icon('clipboard-list', 17) %><span class="nav-label nav-label-long">Peminjaman Saya</span><span class="nav-label-short" aria-hidden="true">Pinjaman</span>
+      <% for (const item of navigation) { %>
+        <% if (catalogOnly && item.page === 'loans') continue; %>
+        <a class="dock-control" href="<%= item.href %>" <%= page === item.page ? 'aria-current=page' : '' %>>
+          <%- icon(item.icon, 17) %><span class="nav-label"><%= item.label %></span>
+          <span class="dock-tooltip" aria-hidden="true"><%= item.label %></span>
         </a>
       <% } %>
-      <a href="/panduan" <%= page === 'guide' ? 'aria-current=page' : '' %>>
-        <%- icon('book-open', 17) %><span class="nav-label">Panduan</span>
-      </a>
     </nav>
     <div class="header-account">
       <% if (catalogOnly) { %>
-        <span class="badge badge-blue header-preview"><%- icon('eye', 16) %><span>Pratinjau katalog</span></span>
+        <span class="badge badge-blue header-preview dock-control">
+          <%- icon('eye', 16) %><span class="nav-label">Pratinjau katalog</span>
+          <span class="dock-tooltip" aria-hidden="true">Pratinjau katalog</span>
+        </span>
       <% } else if (!user) { %>
-        <a href="/masuk" class="button button-small header-login"><%- icon('log-in', 17) %><span>Masuk</span></a>
+        <a href="/masuk" class="button button-small header-login dock-control">
+          <%- icon('log-in', 17) %><span class="nav-label">Masuk</span>
+          <span class="dock-tooltip" aria-hidden="true">Masuk</span>
+        </a>
       <% } else { %>
         <details class="account-menu">
-          <summary>
+          <summary class="dock-control">
             <span class="avatar" aria-hidden="true"><%= initials(user.name) %></span>
             <span class="sr-only">Menu akun</span>
             <span class="account-name"><%= user.name %></span>
             <%- icon('chevron-down', 15) %>
+            <span class="dock-tooltip" aria-hidden="true">Menu akun</span>
           </summary>
           <div class="account-popover">
             <div class="account-identity">

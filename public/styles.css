@@ -135,12 +135,21 @@ svg {
 
 /* A fixed layout height keeps the page from jumping while the header contracts. */
 .site-header {
+  --dock-width: 276px;
+  --dock-size: 42px;
+  --dock-surface: #211f1b;
+  --dock-edge: #72695a;
+  --dock-text: #fff9e9;
   position: sticky;
   top: 0;
   z-index: 10;
   height: 80px;
   isolation: isolate;
   pointer-events: none;
+}
+
+.site-header[data-catalog-only] {
+  --dock-width: 230px;
 }
 
 .site-header::before {
@@ -157,7 +166,7 @@ svg {
   position: relative;
   display: grid;
   height: 78px;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   column-gap: 16px;
   border: 2px solid transparent;
@@ -166,7 +175,7 @@ svg {
   transition:
     width 360ms var(--ease), height 340ms var(--ease), translate 340ms var(--ease),
     padding 340ms var(--ease), border-color 220ms ease, border-radius 340ms var(--ease),
-    background-color 250ms ease, box-shadow 300ms var(--ease);
+    background-color 250ms ease, color 180ms ease, box-shadow 300ms var(--ease);
 }
 
 .site-header[data-compact]::before {
@@ -174,14 +183,16 @@ svg {
 }
 
 .site-header[data-compact] .site-header-inner {
-  width: min(774px, calc(100% - 76px));
-  height: 62px;
-  padding-inline: 10px;
+  width: min(var(--dock-width), calc(100% - 24px));
+  height: 58px;
+  column-gap: 3px;
+  padding-inline: 8px;
   translate: 0 10px;
-  border: var(--stroke);
-  border-radius: 15px;
-  background: var(--paper);
-  box-shadow: var(--shadow);
+  border-color: var(--dock-edge);
+  border-radius: 999px;
+  background-color: var(--dock-surface);
+  color: var(--dock-text);
+  box-shadow: inset 0 1px 0 rgb(255 249 233 / 12%), 0 5px 14px rgb(29 27 23 / 25%);
 }
 
 .brand {
@@ -238,16 +249,6 @@ svg {
   gap: 0;
 }
 
-.site-header[data-compact] .brand-icon {
-  width: 38px;
-  height: 38px;
-}
-
-.site-header[data-compact] .brand-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
 .site-header[data-compact] .brand-text {
   max-width: 0;
   opacity: 0;
@@ -287,12 +288,17 @@ svg {
   box-shadow: var(--shadow-small);
 }
 
-.site-header[data-compact] .site-nav a {
-  min-height: 38px;
-  border-color: var(--ink);
+.dock-control {
+  position: relative;
 }
 
-.nav-label-short {
+.nav-label {
+  max-width: 150px;
+  overflow: hidden;
+  transition: max-width 260ms var(--ease), opacity 160ms ease;
+}
+
+.dock-tooltip {
   display: none;
 }
 
@@ -412,12 +418,6 @@ summary::-webkit-details-marker {
   transition: max-width 320ms var(--ease), margin 320ms var(--ease), opacity 180ms ease;
 }
 
-.site-header[data-compact] .account-name {
-  max-width: 0;
-  margin-right: -8px;
-  opacity: 0;
-}
-
 .avatar {
   display: grid;
   width: 30px;
@@ -441,6 +441,7 @@ summary::-webkit-details-marker {
   border: var(--stroke);
   border-radius: 7px;
   background: var(--paper);
+  color: var(--ink);
   box-shadow: var(--shadow);
   animation: settle-in 220ms var(--ease) both;
 }
@@ -474,6 +475,112 @@ summary::-webkit-details-marker {
 .account-popover :is(a, button):hover,
 .account-popover a[aria-current] {
   background: var(--lilac);
+}
+
+.site-header[data-compact] .site-nav {
+  gap: 4px;
+}
+
+.site-header[data-compact] :is(.brand-icon, .site-nav a, .header-login, .header-preview, .account-menu summary) {
+  width: var(--dock-size);
+  height: var(--dock-size);
+  min-height: var(--dock-size);
+  flex: none;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dock-text);
+  box-shadow: none;
+  translate: none;
+}
+
+.site-header[data-compact] :is(.brand:hover .brand-icon, .site-nav a:hover, .header-login:hover, .account-menu summary:hover, .account-menu[open] summary) {
+  border-color: var(--dock-edge);
+  background: #3b362d;
+}
+
+.site-header[data-compact] .site-nav a[aria-current] {
+  border-color: #b3b64a;
+  background: #404126;
+  color: var(--lime);
+}
+
+.site-header[data-compact] :is(.brand-icon, .header-login, .header-preview) {
+  border-color: #514a3f;
+  background: #2e2b24;
+}
+
+.site-header[data-compact] .header-account {
+  padding-left: 8px;
+  border-left: 1px solid var(--dock-edge);
+}
+
+.site-header[data-compact] .avatar {
+  width: 31px;
+  height: 31px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.site-header[data-compact] .dock-control > svg {
+  width: 19px;
+  height: 19px;
+}
+
+.site-header[data-compact] .brand-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.site-header[data-compact] :is(.nav-label, .account-name) {
+  max-width: 0;
+  opacity: 0;
+}
+
+.site-header[data-compact] .account-menu summary > svg {
+  display: none;
+}
+
+.site-header[data-compact] .dock-control:focus-visible {
+  border-radius: 50%;
+  outline: 2px solid var(--lime);
+  outline-offset: 1px;
+}
+
+.site-header[data-compact] .dock-tooltip {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 13px);
+  left: 50%;
+  display: block;
+  padding: 4px 8px;
+  transform: translate(-50%, -3px);
+  border: 1px solid var(--ink);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-small);
+  font: 750 11px/1.4 var(--body);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms var(--ease), visibility 140ms ease;
+}
+
+.site-header[data-compact]:not([data-tooltip-dismissed]) :is(.dock-control:hover, .dock-control:focus-visible) > .dock-tooltip {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.site-header[data-compact] .account-menu[open] summary > .dock-tooltip {
+  display: none;
 }
 
 .catalog-main {
@@ -1841,61 +1948,19 @@ summary::-webkit-details-marker {
   }
 
   .site-header[data-compact] .site-header-inner {
-    width: calc(100% - 38px);
-    height: 55px;
-    align-items: start;
-    padding: 6px;
+    align-items: center;
+    padding-top: 0;
     translate: 0 8px;
-    border-radius: 12px;
   }
 
   .site-header[data-compact] .site-nav {
     top: 6px;
-    right: 51px;
-    left: 48px;
+    justify-content: center;
+    pointer-events: none;
   }
 
   .site-header[data-compact] .site-nav a {
-    min-height: 37px;
-    flex: 1 1 0;
-    gap: 4px;
-    padding: 4px 3px;
-    font-size: 11px;
-  }
-
-  .site-header[data-compact] .site-nav svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  .site-header[data-compact] .brand-icon {
-    width: 36px;
-    height: 36px;
-  }
-
-  .site-header[data-compact] :is(.nav-label-long, .header-login span, .header-preview span, .account-menu summary > svg) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  .site-header[data-compact] :is(.header-login, .header-preview) {
-    min-width: 36px;
-    min-height: 37px;
-    justify-content: center;
-    padding-inline: 5px;
-  }
-
-  .site-header[data-compact] .account-menu summary {
-    min-height: 37px;
-    gap: 0;
-    padding: 2px;
-  }
-
-  .site-header[data-compact] .nav-label-short {
-    display: inline;
+    pointer-events: auto;
   }
 
   #konten,
@@ -2059,18 +2124,6 @@ summary::-webkit-details-marker {
 }
 
 @media (max-width: 365px) {
-  .site-header[data-compact] .nav-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  .site-header[data-compact] .nav-label-short {
-    display: none;
-  }
-
   .site-nav a {
     gap: 3px;
     font-size: 11px;
