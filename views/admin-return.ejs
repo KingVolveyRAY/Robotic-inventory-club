@@ -1,0 +1,34 @@
+<%- include('partials/head', { title: 'Periksa Pengembalian' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <a class="back-link" href="/admin?status=borrowed#pinjaman-<%= loan.id %>"><%- icon('arrow-left', 17) %> Kembali ke peminjaman</a>
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Periksa pengembalian</h1>
+      <p>#<%= loan.id %> · <%= loan.title %> · <%= loan.borrower %></p>
+    </div>
+  </div>
+  <%- include('partials/feedback') %>
+  <form class="form-stack editor-panel" method="post" action="/admin/peminjaman/<%= loan.id %>/pengembalian" data-busy-label="Mencatat…">
+    <%- include('partials/csrf') %>
+    <% for (const line of loan.items) { %>
+      <fieldset class="panel dashboard-panel form-stack inspection-line">
+        <legend><%= line.equipment_name %> · <%= line.quantity %> unit</legend>
+        <label class="field">
+          <span>Unit yang perlu servis</span>
+          <input type="number" name="servis-<%= line.id %>" min="0" max="<%= line.quantity %>" value="<%= values['servis-' + line.id] ?? '0' %>" required>
+        </label>
+        <label class="field">
+          <span>Catatan kondisi atau kelengkapan</span>
+          <textarea name="catatan-<%= line.id %>" rows="2" maxlength="300" placeholder="Contoh: satu motor tidak berputar"><%= values['catatan-' + line.id] ?? '' %></textarea>
+          <small>Isi catatan ketika ada unit yang perlu servis.</small>
+        </label>
+      </fieldset>
+    <% } %>
+    <label class="check-field"><input name="diperiksa" type="checkbox" value="1" <%= values.diperiksa === '1' ? 'checked' : '' %> required> Kondisi dan kelengkapan semua alat sudah diperiksa.</label>
+    <div class="dashboard-actions">
+      <button type="submit" class="button button-primary"><%- icon('check', 18) %> Catat pengembalian</button>
+    </div>
+  </form>
+</main>
+<%- include('partials/footer') %>

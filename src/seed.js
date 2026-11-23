@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { hashPassword, validPassword } from './auth.js';
 import { ADMIN_USERNAME, clubDate, normalizeEmail, shiftDate, validEmail } from './domain.js';
 import { addMissingEquipment, equipmentSamples, expandedEquipment, starterEquipment } from './equipment-samples.js';
@@ -28,7 +29,65 @@ export async function prepareData(inventory, { demo, admin, sampleInventory }) {
   if (demo) await seedDemo(inventory);
   else if (admin) await seedAdmin(inventory, admin);
 
-  if (demo || sampleInventory) await seedSampleCatalog(inventory, demo);
+  if (demo || sampleInventory) {
+    await seedSampleCatalog(inventory, demo);
+    await seedLabExamples(inventory, demo);
+  }
+}
+
+async function seedLabExamples(inventory, demo) {
+  await inventory.transaction(async (database) => {
+    if (await database.hasMetadata('sample-projects:v1')) return;
+    const items = new Map((await database.inventory()).map((item) => [item.image, item]));
+    const kits = [
+      {
+        title: 'Robot Hindar Rintangan',
+        description: 'Rangkai rover yang membaca jarak di depannya dan mencoba jalur lain ketika menemui rintangan.',
+        images: ['chassis-4wd.webp', 'arduino-uno.webp', 'sensor-hc-sr04.webp', 'driver-tb6612fng.webp', 'kabel-jumper-dupont.webp'],
+      },
+      {
+        title: 'Stasiun Pemantauan Suhu',
+        description: 'Buat prototipe pemantau suhu dan kelembapan ruangan dengan mikrokontroler dan sensor digital.',
+        images: ['sensor-dht22.webp', 'esp32-devkit.webp', 'breadboard-830.webp', 'kabel-jumper-dupont.webp'],
+      },
+    ];
+    if (!(await database.listKits(false)).length) {
+      for (const kit of kits) {
+        const components = kit.images.map((image) => items.get(image));
+        if (!components.every((item) => item?.active)) continue;
+        const parts = components.map((item) => ({ equipmentId: item.id, quantity: 1 }));
+        await database.saveKit(null, { ...kit, active: 1, parts });
+      }
+    }
+    if (demo) {
+      const member = await database.userByEmail(demoAccounts.member.email);
+      const exampleKit = kits[0];
+      const components = exampleKit.images.map((image) => items.get(image));
+      const today = clubDate();
+      if (components.every(Boolean)) {
+        const group = await database.addLoanGroup(exampleKit.title);
+        const ids = [];
+        for (const item of components) {
+          ids.push(await database.addLoan(item.id, member.id, {
+            quantity: 1, start: shiftDate(today, -7), due: shiftDate(today, -3), purpose: 'Uji navigasi rover di meja praktik',
+          }, 'returned', group));
+        }
+        await database.addProject(ids[0], {
+          title: 'Rover untuk lintasan rintangan',
+          description: 'Contoh rakitan klub. Kelompok pertama menguji posisi sensor pada bagian depan rover dan mencatat keberhasilan robot melewati tiga rintangan di lintasan latihan.',
+          photo: readFileSync(new URL('../public/images/rover-lab.webp', import.meta.url)),
+          photoType: 'image/webp',
+        }, today);
+      }
+      const distanceSensor = items.get('sensor-hc-sr04.webp');
+      if (distanceSensor) {
+        const event = await database.saveEvent(null, 'Praktikum Robot Bergerak', shiftDate(today, 7));
+        await database.addEventNeed(event, 'Tim Rover', distanceSensor.id, 5);
+        await database.addEventNeed(event, 'Tim Sensor', distanceSensor.id, 4);
+      }
+    }
+    await database.setMetadata('sample-projects:v1', '1');
+  });
 }
 
 async function seedSampleCatalog(inventory, demo) {

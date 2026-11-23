@@ -75,16 +75,34 @@ export function validEmail(value) {
 }
 
 export function recordId(value) {
-  if (!/^[1-9]\d{0,9}$/.test(value)) {
+  if (typeof value !== 'string' || !/^[1-9]\d{0,9}$/.test(value) || Number(value) > 2147483647) {
     throw new AppError(404, 'Data yang kamu cari tidak ditemukan.');
   }
   return Number(value);
 }
 
-function validDate(value) {
+export function validDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) &&
     Number.isFinite(Date.parse(value)) &&
     new Date(value).toISOString().slice(0, 10) === value;
+}
+
+export function bundleAvailability(parts) {
+  if (!parts.length) return 0;
+  return Math.max(0, Math.min(...parts.map((part) => part.equipment_active ? Math.floor(part.available / part.quantity) : 0)));
+}
+
+export function validateReturnInspection(line, body) {
+  const value = asText(body[`servis-${line.id}`]);
+  const note = asText(body[`catatan-${line.id}`]);
+  const quantity = Number(value);
+  if (!/^\d{1,3}$/.test(value) || quantity > line.quantity) {
+    throw new AppError(422, `Isi jumlah unit yang perlu servis untuk ${line.equipment_name} (0–${line.quantity}).`);
+  }
+  if (note.length > 300 || (quantity && note.length < 3)) {
+    throw new AppError(422, `Tulis kondisi atau kelengkapan ${line.equipment_name} (3–300 karakter jika perlu servis).`);
+  }
+  return { quantity, note };
 }
 
 export function validateLoan(body, today) {

@@ -1,0 +1,37 @@
+<%- include('partials/head', { title: 'Bagikan Rakitan' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <a class="back-link" href="/peminjaman"><%- icon('arrow-left', 17) %> Kembali ke dashboard anggota</a>
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Bagikan rakitan</h1>
+      <p>Ceritakan proyekmu dan hubungkan alat yang sudah kamu kembalikan.</p>
+    </div>
+  </div>
+  <%- include('partials/feedback') %>
+  <% if (loans.length) { %>
+    <form class="panel dashboard-panel form-stack editor-panel" method="post" action="/galeri/bagikan" enctype="multipart/form-data" data-busy-label="Menerbitkan…">
+      <%- include('partials/csrf') %>
+      <label class="field">
+        <span>Peminjaman yang sudah selesai</span>
+        <select name="pinjaman" required>
+          <option value="">Pilih peminjaman</option>
+          <% for (const loan of loans) { %>
+            <option value="<%= loan.id %>" <%= selected === String(loan.id) ? 'selected' : '' %>><%= loan.title %> · #<%= loan.id %></option>
+          <% } %>
+        </select>
+      </label>
+      <label class="field"><span>Judul rakitan</span><input name="title" minlength="3" maxlength="90" value="<%= values.title || '' %>" required></label>
+      <label class="field"><span>Cerita proyek</span><textarea name="description" rows="5" minlength="10" maxlength="1200" required><%= values.description || '' %></textarea></label>
+      <label class="field"><span>Foto rakitan (opsional)</span><input type="file" name="photo" accept="image/jpeg,image/png,image/webp"><small>JPEG, PNG, atau WebP hingga 2 MB.</small></label>
+      <label class="check-field"><input name="publik" type="checkbox" value="1" required> Tampilkan nama saya, cerita, dan foto ini di Galeri Rakitan.</label>
+      <div class="dashboard-actions">
+        <button class="button button-primary" type="submit"><%- icon('upload', 18) %> Terbitkan rakitan</button>
+        <a class="button button-secondary" href="/galeri">Batal</a>
+      </div>
+    </form>
+  <% } else { %>
+    <%- include('partials/empty', { glyph: 'camera', title: 'Belum ada peminjaman yang bisa dibagikan', description: 'Setelah serah terima pengembalian selesai, kamu bisa memilih peminjaman dari riwayat yang belum dipublikasikan.', link: { href: '/peminjaman?status=history', label: 'Buka riwayat' } }) %>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

@@ -1,0 +1,75 @@
+<%- include('partials/head', { title: event.name }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <a class="back-link" href="/admin/kegiatan"><%- icon('arrow-left', 17) %> Semua kegiatan</a>
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal><%= event.name %></h1>
+      <p><time datetime="<%= event.event_date %>"><%= formatDate(event.event_date) %></time> · <%= new Set(event.needs.map(row => row.team)).size %> tim</p>
+    </div>
+  </div>
+  <%- include('partials/feedback') %>
+  <section class="panel dashboard-panel" aria-labelledby="event-stock">
+    <div class="section-heading">
+      <h2 id="event-stock" data-word-reveal>Rekap kebutuhan alat</h2>
+      <span class="badge badge-<%= totals.some(item => item.shortage) ? 'amber' : 'green' %>"><%= totals.filter(item => item.shortage).length %> jenis kurang</span>
+    </div>
+    <p class="muted-copy">Perkiraan kebutuhan dibandingkan dengan stok siap dipinjam saat ini.</p>
+    <% if (totals.length) { %>
+      <ul class="component-list event-totals">
+        <% for (const item of totals) { %>
+          <li>
+            <div><strong><%= item.equipment_name %></strong><small><%= item.quantity %> dibutuhkan · <%= item.available %> tersedia</small></div>
+            <span class="badge badge-<%= item.shortage ? 'red' : 'green' %>"><%= item.shortage ? 'Kurang ' + item.shortage + ' unit' : 'Stok cukup' %></span>
+          </li>
+        <% } %>
+      </ul>
+    <% } %>
+  </section>
+  <div class="dashboard-columns event-columns">
+    <section class="panel dashboard-panel">
+      <div class="section-heading"><h2 data-word-reveal>Kebutuhan per tim</h2></div>
+      <% if (!event.needs.length) { %>
+        <p class="muted-copy">Tambahkan alat yang dibutuhkan tiap tim.</p>
+      <% } else { %>
+        <ul class="component-list">
+          <% for (const row of event.needs) { %>
+            <li>
+              <div><strong><%= row.team %></strong><small><%= row.equipment_name %> · <%= row.quantity %> unit</small></div>
+              <form method="post" action="/admin/kegiatan/<%= event.id %>/kebutuhan/<%= row.id %>/hapus">
+                <%- include('partials/csrf') %>
+                <button type="submit" class="button button-small button-quiet-danger" data-confirm="Hapus kebutuhan tim ini?" aria-label="Hapus kebutuhan <%= row.equipment_name %> untuk <%= row.team %>">Hapus</button>
+              </form>
+            </li>
+          <% } %>
+        </ul>
+      <% } %>
+    </section>
+    <section class="panel dashboard-panel">
+      <div class="section-heading"><h2>Catat kebutuhan</h2></div>
+      <% if (equipment.length) { %>
+        <form class="form-stack" method="post" action="/admin/kegiatan/<%= event.id %>/kebutuhan" data-busy-label="Menyimpan…">
+          <%- include('partials/csrf') %>
+          <label class="field"><span>Nama tim</span><input name="team" list="event-teams" minlength="2" maxlength="80" required></label>
+          <datalist id="event-teams"><% for (const team of new Set(event.needs.map(row => row.team))) { %><option value="<%= team %>"><% } %></datalist>
+          <label class="field"><span>Alat</span><select name="alat" required><option value="">Pilih alat</option><% for (const item of equipment) { %><option value="<%= item.id %>"><%= item.name %></option><% } %></select></label>
+          <label class="field"><span>Jumlah unit</span><input type="number" min="1" max="999" name="quantity" value="1" required></label>
+          <button type="submit" class="button button-primary"><%- icon('check', 18) %> Simpan kebutuhan</button>
+        </form>
+      <% } else { %>
+        <p class="muted-copy">Tambah alat di inventaris untuk mulai mencatat kebutuhan.</p>
+        <a class="button button-secondary" href="/admin/alat/baru">Tambah alat</a>
+      <% } %>
+    </section>
+  </div>
+  <details class="panel dashboard-panel event-edit">
+    <summary>Ubah jadwal atau nama</summary>
+    <form class="form-stack" method="post" action="/admin/kegiatan/<%= event.id %>" data-busy-label="Menyimpan…">
+      <%- include('partials/csrf') %>
+      <label class="field"><span>Nama kegiatan</span><input name="name" value="<%= event.name %>" minlength="3" maxlength="90" required></label>
+      <label class="field"><span>Tanggal</span><input name="date" type="date" value="<%= event.event_date %>" required></label>
+      <button type="submit" class="button button-secondary"><%- icon('check', 18) %> Simpan perubahan</button>
+    </form>
+  </details>
+</main>
+<%- include('partials/footer') %>

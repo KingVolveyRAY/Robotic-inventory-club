@@ -1,0 +1,38 @@
+<%- include('partials/head', { title: 'Servis Alat' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Servis alat</h1>
+      <p>Periksa catatan kondisi dan kembalikan unit yang sudah siap ke stok pinjam.</p>
+    </div>
+  </div>
+  <%- include('partials/admin-nav', { current: 'service' }) %>
+  <%- include('partials/feedback') %>
+  <nav class="tabs" aria-label="Status servis"><a href="/admin/servis" <%= resolved ? '' : 'aria-current=page' %>>Dalam servis</a><a href="/admin/servis?status=selesai" <%= resolved ? 'aria-current=page' : '' %>>Selesai</a></nav>
+  <% if (!records.length) { %>
+    <%- include('partials/empty', { glyph: 'wrench', title: resolved ? 'Belum ada riwayat servis' : 'Tidak ada alat dalam servis', description: 'Unit yang ditandai saat pengembalian akan tercatat di sini.', link: null }) %>
+  <% } else { %>
+    <div class="dashboard-list">
+      <% for (const row of records) { %>
+        <article class="panel dashboard-panel" data-reveal>
+          <div class="section-heading">
+            <h2><%= row.equipment_name %></h2>
+            <span class="badge badge-<%= resolved ? 'green' : 'amber' %>"><%= row.service_quantity %> unit</span>
+          </div>
+          <p class="muted-copy">Pinjaman #<%= row.loan_id %> · Diperiksa <%= formatDate(row.checked_on) %></p>
+          <p class="service-note"><%= row.note %></p>
+          <% if (resolved) { %>
+            <p class="muted-copy">Selesai <%= formatDate(row.resolved_on) %></p>
+          <% } else { %>
+            <form method="post" action="/admin/servis/<%= row.loan_id %>/selesai" data-busy-label="Memperbarui…">
+              <%- include('partials/csrf') %>
+              <button class="button button-small button-primary" type="submit" data-confirm="Unit ini sudah diperiksa dan siap dipinjam?">Selesai servis <%- icon('check', 16) %></button>
+            </form>
+          <% } %>
+        </article>
+      <% } %>
+    </div>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

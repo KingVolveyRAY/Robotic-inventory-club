@@ -1,8 +1,13 @@
+<% const sections = [
+  ['overview', '/admin', 'layout-dashboard', 'Ringkasan'],
+  ['loans', '/admin?status=pending', 'clipboard-list', 'Peminjaman'],
+  ['inventory', '/admin/alat', 'boxes', 'Inventaris'],
+  ['service', '/admin/servis', 'wrench', 'Servis'],
+  ['kits', '/admin/kit', 'package-check', 'Kit Proyek'],
+  ['events', '/admin/kegiatan', 'calendar-days', 'Kegiatan'],
+]; %>
 <nav class="staff-nav" aria-label="Navigasi pengurus">
-  <a href="/admin" <%= current === 'loans' ? 'aria-current=page' : '' %>>
-    <%- icon('clipboard-list', 17) %> Peminjaman
-  </a>
-  <a href="/admin/alat" <%= current === 'inventory' ? 'aria-current=page' : '' %>>
-    <%- icon('boxes', 17) %> Inventaris
-  </a>
+  <% for (const [section, href, glyph, label] of sections) { %>
+    <a href="<%= href %>" <%= current === section ? 'aria-current=page' : '' %>><%- icon(glyph, 17) %> <%= label %></a>
+  <% } %>
 </nav>

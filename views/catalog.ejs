@@ -30,6 +30,16 @@
     <% } %>
   </section>
 
+  <% if (kits.length) { %>
+    <section class="dashboard-section catalog-kits" aria-labelledby="featured-kits">
+      <div class="section-heading">
+        <div><h2 id="featured-kits" data-word-reveal>Kit Proyek</h2><p>Pinjam satu paket komponen untuk mulai merakit.</p></div>
+        <a class="button button-small button-primary" href="/kit">Semua kit <%- icon('arrow-up-right', 16) %></a>
+      </div>
+      <%- include('partials/project-cards', { entries: kits, kind: 'kit' }) %>
+    </section>
+  <% } %>
+
   <section class="catalog" id="katalog" tabindex="-1" aria-labelledby="catalog-title">
     <div class="catalog-heading">
       <div>

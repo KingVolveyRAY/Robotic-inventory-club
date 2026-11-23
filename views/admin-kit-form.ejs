@@ -1,0 +1,51 @@
+<%- include('partials/head', { title: kit ? 'Edit Kit Proyek' : 'Buat Kit Proyek' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <a class="back-link" href="/admin/kit"><%- icon('arrow-left', 17) %> Kembali ke Kit Proyek</a>
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal><%= kit ? 'Edit Kit Proyek' : 'Buat Kit Proyek' %></h1>
+      <p>Atur daftar komponen dan jumlahnya untuk satu paket.</p>
+    </div>
+    <% if (kit?.active) { %><a class="button button-secondary" href="/kit/<%= kit.id %>">Lihat kit <%- icon('arrow-up-right', 17) %></a><% } %>
+  </div>
+  <%- include('partials/feedback') %>
+  <% if (equipment.length < 2) { %>
+    <%- include('partials/empty', { glyph: 'boxes', title: 'Tambahkan alat terlebih dulu', description: 'Kit memerlukan minimal dua jenis alat dari inventaris.', link: { href: '/admin/alat/baru', label: 'Tambah alat' } }) %>
+  <% } else { %>
+    <form class="panel dashboard-panel form-stack editor-panel" method="post" action="/admin/kit<%= kit ? '/' + kit.id : '' %>" data-busy-label="Menyimpan…">
+      <%- include('partials/csrf') %>
+      <label class="field"><span>Nama kit</span><input name="title" value="<%= values.title %>" minlength="3" maxlength="90" required></label>
+      <label class="field"><span>Deskripsi</span><textarea name="description" rows="3" minlength="10" maxlength="500" required><%= values.description %></textarea></label>
+      <fieldset class="kit-parts">
+        <legend>Komponen kit</legend>
+        <p class="muted-copy">Pilih 2–<%= kitSlots %> jenis alat yang berbeda. Foto alat pertama menjadi sampul kit.</p>
+        <% for (let index = 0; index < kitSlots; index++) { %>
+          <% const part = values.parts[index] ?? {}; %>
+          <div class="kit-part-row" data-kit-part>
+            <label class="field">
+              <span>Alat <%= index + 1 %></span>
+              <select name="alat-<%= index %>" <%= index < 2 ? 'required' : '' %>>
+                <option value="">Pilih alat</option>
+                <% for (const item of equipment) { %>
+                  <option value="<%= item.id %>" <%= String(item.id) === String(part.equipmentId) ? 'selected' : '' %>><%= item.name %><%= item.active ? '' : ' (tersembunyi)' %></option>
+                <% } %>
+              </select>
+            </label>
+            <label class="field">
+              <span>Unit</span>
+              <input name="jumlah-<%= index %>" type="number" min="1" max="999" value="<%= part.quantity || 1 %>" aria-label="Unit alat <%= index + 1 %>">
+            </label>
+          </div>
+        <% } %>
+        <button type="button" class="button button-small button-secondary" data-add-kit-part hidden><%- icon('plus', 16) %> Tambah komponen</button>
+      </fieldset>
+      <label class="check-field"><input type="checkbox" name="active" value="1" <%= values.active ? 'checked' : '' %>> Tampilkan di katalog kit</label>
+      <div class="dashboard-actions">
+        <button type="submit" class="button button-primary"><%- icon('check', 18) %> Simpan kit</button>
+        <a href="/admin/kit" class="button button-secondary">Batal</a>
+      </div>
+    </form>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

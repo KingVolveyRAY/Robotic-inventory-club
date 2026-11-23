@@ -1,0 +1,66 @@
+<% const isKit = source === 'kit'; const base = isKit ? '/kit' : '/galeri'; %>
+<%- include('partials/head', { title: bundle.title }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <a class="back-link" href="<%= base %>"><%- icon('arrow-left', 17) %> <%= isKit ? 'Kembali ke Kit Proyek' : 'Kembali ke galeri' %></a>
+  <div class="detail-grid bundle-detail">
+    <article class="panel equipment-detail">
+      <div class="detail-media bundle-media">
+        <% if (bundle.photo_type) { %>
+          <img src="/galeri/<%= bundle.id %>/foto" alt="Rakitan <%= bundle.title %>" width="680" height="380">
+        <% } else { %>
+          <%- include('partials/equipment-image', { item: { name: bundle.title, category: bundle.category, image: bundle.image }, eager: true }) %>
+        <% } %>
+      </div>
+      <div class="equipment-detail-copy">
+        <% if (!isKit) { %><p class="dashboard-label">Oleh <%= bundle.author %> · <%= formatDate(bundle.published_on) %></p><% } %>
+        <h1 data-word-reveal><%= bundle.title %></h1>
+        <p class="project-description"><%= bundle.description %></p>
+        <h2 class="component-heading"><%= isKit ? 'Isi satu kit' : 'Alat yang digunakan' %></h2>
+        <ul class="component-list">
+          <% for (const part of bundle.parts) { %>
+            <% const ready = part.equipment_active ? part.available : 0; %>
+            <% const limiting = bundle.parts.length > 1 && Math.floor(ready / part.quantity) === bundle.available; %>
+            <li>
+              <div>
+                <% if (part.equipment_active) { %>
+                  <a href="/alat/<%= part.equipment_id %>"><strong><%= part.equipment_name %></strong></a>
+                <% } else { %>
+                  <strong><%= part.equipment_name %></strong>
+                <% } %>
+                <small><%= ready %> unit tersedia<%= limiting ? ' · Pembatas stok' : '' %></small>
+              </div>
+              <span class="badge badge-<%= limiting ? 'amber' : 'blue' %>"><%= part.quantity %> unit</span>
+            </li>
+          <% } %>
+        </ul>
+      </div>
+    </article>
+    <section class="panel detail-form" aria-labelledby="request-bundle">
+      <span class="page-icon"><%- icon('package-check', 24) %></span>
+      <h2 id="request-bundle" data-word-reveal><%= isKit ? 'Pinjam kit ini' : 'Pinjam alat proyek ini' %></h2>
+      <%- include('partials/feedback') %>
+      <p class="bundle-available"><strong><%= bundle.available %></strong> paket lengkap tersedia</p>
+      <% if (catalogOnly) { %>
+        <p class="page-description">Kamu bisa menjelajahi kit dan mengecek komponen dalam pratinjau katalog.</p>
+      <% } else if (!bundle.available) { %>
+        <p class="page-description">Cek daftar komponen untuk melihat alat yang sedang terbatas.</p>
+        <a class="button button-secondary" href="/kit">Lihat kit lain <%- icon('arrow-right', 16) %></a>
+      <% } else if (!user) { %>
+        <p class="page-description">Masuk untuk memilih jadwal dan mengirim satu pengajuan untuk seluruh komponen.</p>
+        <a class="button button-primary" href="/masuk?lanjut=<%= encodeURIComponent(base + '/' + bundle.id) %>">Masuk untuk meminjam</a>
+      <% } else { %>
+        <form class="form-stack" method="post" action="<%= base %>/<%= bundle.id %>/pinjam" data-loan-days="<%= maxLoanDays %>" data-busy-label="Mengirim pengajuan…">
+          <%- include('partials/loan-form-fields', { quantityLabel: 'Jumlah paket', available: bundle.available }) %>
+        </form>
+      <% } %>
+      <% if (!isKit && user && (user.id === bundle.author_id || user.role === 'admin')) { %>
+        <form class="project-remove" method="post" action="/galeri/<%= bundle.id %>/hapus">
+          <%- include('partials/csrf') %>
+          <button class="button button-small button-quiet-danger" data-confirm="Hapus rakitan ini dari galeri?" type="submit">Hapus publikasi</button>
+        </form>
+      <% } %>
+    </section>
+  </div>
+</main>
+<%- include('partials/footer') %>

@@ -1,13 +1,19 @@
 <%- include('partials/head', { title: 'Peminjaman Saya' }) %>
 <%- include('partials/header') %>
 <main id="konten" class="shell inner-main">
-  <div class="page-heading">
-    <div>
-      <h1 data-word-reveal>Peminjaman saya</h1>
-      <p>Pantau pengajuan, jadwal pengambilan, dan pengembalian alatmu.</p>
+  <% if (overview) { %>
+    <%- include('partials/member-overview') %>
+  <% } else { %>
+    <a class="back-link" href="/peminjaman"><%- icon('arrow-left', 17) %> Kembali ke dashboard anggota</a>
+    <div class="page-heading">
+      <div>
+        <h1 data-word-reveal>Peminjaman saya</h1>
+        <p><%= selectedStatus ? statuses[selectedStatus].label : 'Pantau pengajuan, pengambilan, dan pengembalian alatmu.' %></p>
+      </div>
+      <a class="button button-primary" href="/#katalog"><%- icon('plus', 18) %> Cari alat</a>
     </div>
-    <a class="button button-primary" href="/#katalog"><%- icon('plus', 18) %> Cari alat</a>
-  </div>
+  <% } %>
+  <% if (overview) { %><div class="section-heading dashboard-section" id="daftar-pinjaman"><h2 data-word-reveal>Peminjaman saya</h2></div><% } %>
   <%- include('partials/feedback') %>
   <%- include('partials/loan-tabs', { base: '/peminjaman', counts: null }) %>
   <% if (!loans.length) { %>
@@ -20,7 +26,7 @@
   <% } else { %>
     <div class="loan-list">
       <% for (const loan of loans) { %>
-        <article class="panel loan-card" id="pinjaman-<%= loan.id %>" data-reveal>
+        <article class="panel loan-card" id="pinjaman-<%= loan.id %>" tabindex="-1" data-reveal>
           <header class="loan-card-header">
             <div class="loan-item">
               <div class="loan-thumbnail">
@@ -30,9 +36,11 @@
                 }) %>
               </div>
               <div>
-                <span class="loan-reference">#<%= loan.id %> · <%= categoryById[loan.category].name %></span>
+                <span class="loan-reference">#<%= loan.id %> · <%= loan.group_id ? 'Proyek' : categoryById[loan.category].name %></span>
                 <h2>
-                  <% if (loan.equipment_active) { %>
+                  <% if (loan.group_id) { %>
+                    <%= loan.title %>
+                  <% } else if (loan.equipment_active) { %>
                     <a href="/alat/<%= loan.equipment_id %>"><%= loan.equipment_name %></a>
                   <% } else { %>
                     <%= loan.equipment_name %>
@@ -44,11 +52,20 @@
           </header>
           <%- include('partials/loan-progress', { loan }) %>
           <%- include('partials/loan-meta', { loan }) %>
+          <%- include('partials/loan-components', { loan }) %>
           <% if (loan.status === 'pending' || loan.status === 'approved') { %>
             <form class="loan-actions" action="/peminjaman/<%= loan.id %>/batal" method="post" data-busy-label="Memproses…">
               <%- include('partials/csrf') %>
               <button class="button button-small button-quiet-danger" type="submit" data-confirm="Batalkan peminjaman ini?">Batalkan pengajuan</button>
             </form>
+          <% } else if (loan.status === 'returned') { %>
+            <div class="loan-actions">
+              <% if (loan.project_id) { %>
+                <a class="button button-small button-secondary" href="/galeri/<%= loan.project_id %>"><%- icon('images', 16) %> Lihat rakitan</a>
+              <% } else { %>
+                <a class="button button-small button-secondary" href="/galeri/bagikan?pinjaman=<%= loan.id %>"><%- icon('camera', 16) %> Bagikan rakitan</a>
+              <% } %>
+            </div>
           <% } %>
         </article>
       <% } %>

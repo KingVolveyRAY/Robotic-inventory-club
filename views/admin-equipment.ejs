@@ -25,8 +25,9 @@
         </label>
         <label class="field">
           <span>Total stok</span>
-          <input type="number" name="total" min="<%= item?.reserved ?? 0 %>" max="999" value="<%= values.total %>" required>
+          <input type="number" name="total" min="<%= item ? item.reserved + item.service : 0 %>" max="999" value="<%= values.total %>" required>
           <% if (item?.reserved) { %><small><%= item.reserved %> unit sedang dipesan atau dipinjam.</small><% } %>
+          <% if (item?.service) { %><small><%= item.service %> unit dalam servis.</small><% } %>
         </label>
       </div>
       <label class="field">

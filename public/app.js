@@ -113,3 +113,23 @@ window.addEventListener('pageshow', () => {
   button.removeAttribute('aria-disabled');
   activeSubmission = undefined;
 });
+
+const addPart = document.querySelector('[data-add-kit-part]');
+if (addPart) {
+  const parts = [...document.querySelectorAll('[data-kit-part]')];
+  const shown = Math.max(2, parts.findLastIndex((part) => part.querySelector('select').value) + 1);
+  parts.forEach((part, index) => { part.hidden = index >= shown; });
+  addPart.hidden = shown === parts.length;
+  addPart.addEventListener('click', () => {
+    const next = parts.find((part) => part.hidden);
+    if (!next) return;
+    next.hidden = false;
+    next.querySelector('select').focus();
+    addPart.hidden = parts.every((part) => !part.hidden);
+  });
+}
+
+for (const button of document.querySelectorAll('[data-print-label]')) {
+  button.hidden = false;
+  button.addEventListener('click', () => window.print());
+}

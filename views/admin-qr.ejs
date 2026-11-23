@@ -1,0 +1,22 @@
+<%- include('partials/head', { title: 'Label QR ' + item.name }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main qr-page">
+  <a class="back-link" href="/admin/alat/<%= item.id %>"><%- icon('arrow-left', 17) %> Kembali ke data alat</a>
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Label QR alat</h1>
+      <p>Tempel label pada kotak alat. Pindai dengan kamera HP untuk membuka daftar serah terima di akun pengurus.</p>
+    </div>
+  </div>
+  <section class="panel printed-label" aria-label="Label yang bisa dicetak">
+    <strong>RoboLab</strong>
+    <h2><%= item.name %></h2>
+    <img src="/admin/alat/<%= item.id %>/label.png" alt="Kode QR untuk serah terima <%= item.name %>" width="300" height="300">
+  </section>
+  <div class="dashboard-actions qr-actions">
+    <button class="button button-primary" type="button" data-print-label hidden><%- icon('printer', 18) %> Cetak label</button>
+    <a class="button button-secondary" href="/admin/alat/<%= item.id %>/label.png" download="robolab-alat-<%= item.id %>.png"><%- icon('download', 17) %> Unduh QR</a>
+    <a class="button button-secondary" href="/admin?alat=<%= item.id %>">Buka serah terima</a>
+  </div>
+</main>
+<%- include('partials/footer') %>

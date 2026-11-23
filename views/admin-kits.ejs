@@ -1,0 +1,33 @@
+<%- include('partials/head', { title: 'Kelola Kit Proyek' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Kelola Kit Proyek</h1>
+      <p>Gabungkan beberapa jenis alat dari inventaris menjadi satu pengajuan.</p>
+    </div>
+    <a class="button button-primary" href="/admin/kit/baru"><%- icon('plus', 18) %> Buat kit</a>
+  </div>
+  <%- include('partials/admin-nav', { current: 'kits' }) %>
+  <%- include('partials/feedback') %>
+  <% if (!kits.length) { %>
+    <%- include('partials/empty', { glyph: 'package-open', title: 'Belum ada kit', description: 'Pilih alat dan jumlah setiap komponen untuk membuat paket proyek pertama.', link: null }) %>
+  <% } else { %>
+    <div class="dashboard-list">
+      <% for (const kit of kits) { %>
+        <article class="panel dashboard-panel" data-reveal>
+          <div class="section-heading">
+            <h2><%= kit.title %></h2>
+            <span class="badge badge-<%= kit.active ? 'green' : 'muted' %>"><%= kit.active ? 'Tayang' : 'Draf' %></span>
+          </div>
+          <p class="muted-copy"><%= kit.parts.length %> jenis alat · <%= kit.available %> paket lengkap tersedia</p>
+          <div class="dashboard-actions">
+            <a class="button button-small button-secondary" href="/admin/kit/<%= kit.id %>"><%- icon('pencil', 16) %> Edit kit</a>
+            <% if (kit.active) { %><a class="button button-small button-secondary" href="/kit/<%= kit.id %>">Lihat di katalog <%- icon('arrow-up-right', 15) %></a><% } %>
+          </div>
+        </article>
+      <% } %>
+    </div>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

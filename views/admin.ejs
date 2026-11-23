@@ -1,36 +1,70 @@
 <%- include('partials/head', { title: 'Panel Pengurus' }) %>
 <%- include('partials/header') %>
 <main id="konten" class="shell inner-main">
-  <div class="page-heading">
-    <div>
-      <h1 data-word-reveal>Panel pengurus</h1>
-      <p>Tinjau pengajuan dan catat pengambilan serta pengembalian alat.</p>
+  <% if (overview) { %>
+    <section class="dashboard-banner admin-banner" aria-labelledby="admin-title">
+      <div>
+        <p class="dashboard-label"><%= formatDate(today) %> · WIB</p>
+        <h1 id="admin-title" data-word-reveal>Panel pengurus</h1>
+        <p>Siapkan alat, pantau yang jatuh tempo, dan tindak lanjuti unit yang perlu diperiksa.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a class="button button-primary" href="/admin/alat"><%- icon('boxes', 18) %> Kelola inventaris</a>
+        <a class="button button-secondary" href="/admin/kegiatan"><%- icon('calendar-days', 18) %> Rencana kegiatan</a>
+      </div>
+    </section>
+  <% } else { %>
+    <div class="page-heading">
+      <div>
+        <h1 data-word-reveal><%= equipment ? equipment.name : task?.label ?? 'Kelola peminjaman' %></h1>
+        <p><%= equipment ? 'Serah terima untuk peminjaman aktif yang memakai alat ini.' : 'Tinjau pengajuan dan catat serah terima alat.' %></p>
+      </div>
+      <% if (equipment) { %><a class="button button-secondary" href="/admin/alat/<%= equipment.id %>/label"><%- icon('qr-code', 17) %> Label QR</a><% } %>
     </div>
-  </div>
-  <%- include('partials/admin-nav', { current: 'loans' }) %>
+  <% } %>
+  <%- include('partials/admin-nav', { current: overview ? 'overview' : 'loans' }) %>
   <%- include('partials/feedback') %>
-  <%- include('partials/loan-tabs', { base: '/admin' }) %>
+  <% if (overview) { %>
+    <section aria-labelledby="today-tasks" class="today-tasks">
+      <div class="section-heading">
+        <h2 id="today-tasks" data-word-reveal>Dashboard Hari Ini</h2>
+      </div>
+      <div class="dashboard-stats admin-stats">
+        <%- include('partials/dashboard-stat', { tone: 'blue', href: '/admin?status=pending', glyph: 'clipboard-list', count: counts.pending, label: 'Pengajuan menunggu' }) %>
+        <%- include('partials/dashboard-stat', { tone: 'green', href: '/admin?hari=ambil', glyph: 'package-check', count: tasks.ambil.loans.length, label: tasks.ambil.label }) %>
+        <%- include('partials/dashboard-stat', { tone: 'amber', href: '/admin?hari=kembali', glyph: 'calendar-check', count: tasks.kembali.loans.length, label: tasks.kembali.label }) %>
+        <%- include('partials/dashboard-stat', { tone: 'red', href: '/admin?hari=terlambat', glyph: 'clock-3', count: tasks.terlambat.loans.length, label: tasks.terlambat.label }) %>
+        <%- include('partials/dashboard-stat', { tone: 'purple', href: '/admin/servis', glyph: 'wrench', count: serviceUnits, label: 'Unit dalam servis' }) %>
+      </div>
+    </section>
+    <div class="section-heading dashboard-section">
+      <h2 data-word-reveal>Pengajuan masuk</h2>
+      <a href="/admin?status=pending" class="button button-small button-secondary">Buka antrean</a>
+    </div>
+  <% } %>
+  <% if (!task && !equipment && !overview) { %><%- include('partials/loan-tabs', { base: '/admin' }) %><% } %>
   <% if (!loans.length) { %>
     <%- include('partials/empty', {
       glyph: 'inbox',
       title: 'Tidak ada peminjaman',
-      description: 'Belum ada peminjaman dalam status ini.',
-      link: null,
+      description: 'Belum ada peminjaman dalam daftar ini.',
+      link: task || equipment ? { href: '/admin', label: 'Kembali ke dashboard' } : null,
     }) %>
   <% } else { %>
     <div class="loan-list">
-      <% for (const loan of loans) { %>
+      <% for (const loan of (overview ? loans.slice(0, 3) : loans)) { %>
         <article class="panel loan-card staff-loan" id="pinjaman-<%= loan.id %>" data-reveal>
           <header class="loan-card-header">
             <div>
-              <span class="loan-reference">#<%= loan.id %> · <%= categoryById[loan.category].name %></span>
-              <h2><%= loan.equipment_name %></h2>
+              <span class="loan-reference">#<%= loan.id %> · <%= loan.group_id ? 'Proyek' : categoryById[loan.category].name %></span>
+              <h2><%= loan.title %></h2>
               <p class="borrower"><%- icon('user-round', 16) %> <strong><%= loan.borrower %></strong> <span><%= loan.borrower_email %></span></p>
             </div>
             <%- include('partials/loan-badge', { loan }) %>
           </header>
           <%- include('partials/loan-meta', { loan }) %>
-          <% if (loan.status === 'pending' || loan.status === 'approved' || loan.status === 'borrowed') { %>
+          <%- include('partials/loan-components', { loan }) %>
+          <% if (loan.status === 'pending' || loan.status === 'approved') { %>
             <form class="loan-actions" action="/admin/peminjaman/<%= loan.id %>/tindakan" method="post" data-busy-label="Memproses…">
               <%- include('partials/csrf') %>
               <% if (loan.status === 'pending') { %>
@@ -40,17 +74,36 @@
                   <button class="button button-small button-primary" name="action" value="approve">Setujui <%- icon('check', 16) %></button>
                 <% } %>
                 <button class="button button-small button-quiet-danger" name="action" value="decline" data-confirm="Tolak pengajuan ini?">Tolak</button>
-              <% } else if (loan.status === 'approved') { %>
+              <% } else { %>
                 <% if (loan.start_date <= today && today <= loan.due_date) { %>
                   <button class="button button-small button-primary" name="action" value="pickup">Catat pengambilan <%- icon('check', 16) %></button>
                 <% } else { %>
                   <p class="action-hint"><%= today < loan.start_date ? 'Pengambilan belum terjadwal untuk hari ini.' : 'Jadwal pengambilan sudah lewat.' %></p>
                 <% } %>
                 <button class="button button-small button-quiet-danger" name="action" value="cancel" data-confirm="Batalkan peminjaman dan lepaskan stok?">Batalkan</button>
-              <% } else { %>
-                <button class="button button-small button-primary" name="action" value="return" data-confirm="Alat sudah diperiksa dan dikembalikan ke inventaris?">Catat pengembalian <%- icon('check', 16) %></button>
               <% } %>
             </form>
+          <% } else if (loan.status === 'borrowed') { %>
+            <div class="loan-actions">
+              <a class="button button-small button-primary" href="/admin/peminjaman/<%= loan.id %>/pengembalian">Periksa pengembalian <%- icon('clipboard-check', 16) %></a>
+            </div>
+          <% } else if (loan.status === 'returned' && loan.items.some(line => line.service_quantity !== null)) { %>
+            <details class="inspection-history">
+              <summary>Hasil pemeriksaan</summary>
+              <ul class="component-list compact-components">
+                <% for (const line of loan.items) { %>
+                  <li>
+                    <div>
+                      <strong><%= line.equipment_name %></strong>
+                      <% if (line.inspection_note) { %><small><%= line.inspection_note %></small><% } %>
+                    </div>
+                    <span class="badge badge-<%= line.service_quantity && !line.resolved_on ? 'amber' : 'green' %>">
+                      <%= line.service_quantity ? line.resolved_on ? 'Servis selesai' : line.service_quantity + ' unit diservis' : 'Siap dipinjam' %>
+                    </span>
+                  </li>
+                <% } %>
+              </ul>
+            </details>
           <% } %>
         </article>
       <% } %>

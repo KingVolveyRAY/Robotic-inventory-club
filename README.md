@@ -22,6 +22,10 @@ Buka http://127.0.0.1:3000. Pilih **Masuk → Akun demo** untuk mencoba sebagai 
 
 Persetujuan langsung menahan stok sampai pengembalian atau pembatalan. Anggota bisa membatalkan sebelum alat diambil. Tanggal memakai kalender WIB. Pengambilan bisa diajukan hingga 30 hari ke depan dengan durasi maksimal 14 hari termasuk hari pengambilan.
 
+Di **Pinjaman**, anggota punya dashboard jadwal pribadi, Kit Proyek, dan Galeri Rakitan. Pengajuan kit memakai stok komponen yang sama dengan katalog. Setelah pengembalian, anggota bisa menerbitkan cerita dan foto rakitan serta membagikan daftar alatnya.
+
+Di **Panel Pengurus**, kartu **Dashboard Hari Ini** membuka antrean yang perlu ditangani. Checklist pengembalian menyimpan catatan kondisi dan menahan unit yang perlu diperbaiki sampai ditandai selesai di **Servis**. **Inventaris** menyediakan label QR per jenis alat untuk membuka daftar serah terima, dan **Kegiatan** membandingkan kebutuhan tim dengan stok siap dipinjam saat ini.
+
 ## Jalankan untuk inventaris klub
 
 1. Jalankan `npm ci` dari root repositori.

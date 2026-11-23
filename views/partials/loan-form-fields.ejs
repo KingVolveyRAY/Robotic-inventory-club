@@ -1,0 +1,21 @@
+<%- include('csrf') %>
+<label class="field">
+  <span><%= quantityLabel %></span>
+  <input name="quantity" type="number" min="1" max="<%= available %>" value="<%= values.quantity %>" required>
+</label>
+<div class="field-row">
+  <label class="field">
+    <span>Tanggal ambil</span>
+    <input name="start" type="date" min="<%= today %>" max="<%= lastStart %>" value="<%= values.start %>" required>
+  </label>
+  <label class="field">
+    <span>Tanggal kembali</span>
+    <input name="due" type="date" min="<%= today %>" max="<%= lastDue %>" value="<%= values.due %>" required>
+  </label>
+</div>
+<p class="field-hint">Maksimal <%= maxLoanDays %> hari, termasuk hari pengambilan.</p>
+<label class="field">
+  <span>Keperluan</span>
+  <textarea name="purpose" placeholder="Contoh: praktik perakitan robot…" rows="3" minlength="5" maxlength="300" required><%= values.purpose %></textarea>
+</label>
+<button class="button button-primary button-wide" type="submit">Kirim pengajuan <%- icon('arrow-right', 17) %></button>

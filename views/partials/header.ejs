@@ -1,6 +1,7 @@
 <% const navigation = [
   { page: 'catalog', href: '/#katalog', icon: 'layout-grid', label: 'Katalog' },
-  { page: 'loans', href: '/peminjaman', icon: 'clipboard-list', label: 'Peminjaman Saya' },
+  { page: 'kits', href: '/kit', icon: 'package-check', label: 'Kit Proyek' },
+  { page: 'loans', href: '/peminjaman', icon: 'clipboard-list', label: 'Pinjaman' },
   { page: 'guide', href: '/panduan', icon: 'book-open', label: 'Panduan' },
 ]; %>
 <header class="site-header" data-site-header <%= catalogOnly ? 'data-catalog-only' : '' %>>
@@ -42,6 +43,8 @@
             </div>
             <% if (user.role === 'admin') { %>
               <a href="/admin" <%= page === 'admin' ? 'aria-current=page' : '' %>><%- icon('layout-dashboard', 17) %> Panel Pengurus</a>
+            <% } else { %>
+              <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>><%- icon('layout-dashboard', 17) %> Dashboard Anggota</a>
             <% } %>
             <form action="/keluar" method="post">
               <%- include('csrf') %>

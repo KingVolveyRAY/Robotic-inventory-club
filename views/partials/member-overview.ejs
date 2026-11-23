@@ -1,0 +1,76 @@
+<section class="dashboard-banner member-banner" aria-labelledby="member-title">
+  <div>
+    <p class="dashboard-label">Dashboard anggota</p>
+    <h1 id="member-title" data-word-reveal>Halo, <%= user.name.split(/\s+/)[0] %>!</h1>
+    <p>Pantau jadwal alatmu dan temukan kit untuk rakitan berikutnya.</p>
+    <div class="dashboard-actions">
+      <a class="button button-primary" href="/kit"><%- icon('package-check', 18) %> Jelajahi kit</a>
+      <a class="button button-secondary" href="/#katalog"><%- icon('search', 18) %> Cari alat</a>
+    </div>
+  </div>
+  <img src="/images/rover-lab.webp" alt="Rover klub di meja praktik" width="1740" height="550" loading="eager">
+</section>
+
+<div class="dashboard-stats member-stats" aria-label="Ringkasan pinjamanmu">
+  <%- include('dashboard-stat', { tone: 'amber', href: '/peminjaman?status=pending', glyph: 'clock-3', count: counts.pending, label: 'Menunggu persetujuan' }) %>
+  <%- include('dashboard-stat', { tone: 'blue', href: '/peminjaman?status=approved', glyph: 'calendar-check', count: counts.approved, label: 'Disetujui' }) %>
+  <%- include('dashboard-stat', { tone: 'green', href: '/peminjaman?status=borrowed', glyph: 'box', count: counts.borrowed, label: 'Sedang dipinjam' }) %>
+</div>
+
+<div class="dashboard-columns">
+  <section class="panel dashboard-panel" aria-labelledby="my-schedule">
+    <div class="section-heading">
+      <h2 id="my-schedule" data-word-reveal>Jadwal saya</h2>
+      <%- icon('calendar-days', 22) %>
+    </div>
+    <% if (timeline.length) { %>
+      <ul class="schedule-list">
+        <% for (const { loan, date } of timeline) { %>
+          <% const isReturn = loan.status === 'borrowed'; const late = isReturn && date < today; %>
+          <li>
+            <a href="#pinjaman-<%= loan.id %>" data-smooth-scroll>
+              <div>
+                <span class="badge badge-<%= late ? 'red' : date === today ? 'amber' : 'blue' %>">
+                  <%= late ? 'Terlambat' : isReturn ? 'Kembali' : 'Ambil' %>
+                </span>
+                <strong><%= loan.title %></strong>
+              </div>
+              <time datetime="<%= date %>"><%= date === today ? 'Hari ini' : formatDate(date) %></time>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    <% } else { %>
+      <p class="muted-copy">Jadwal ambil dan kembali akan tampil saat ada pinjaman yang disetujui.</p>
+    <% } %>
+  </section>
+  <section class="panel dashboard-panel member-gallery" aria-labelledby="shared-work">
+    <div class="section-heading">
+      <h2 id="shared-work" data-word-reveal>Rakitan klub</h2>
+      <%- icon('images', 22) %>
+    </div>
+    <% if (projects.length) { %>
+      <ul class="dashboard-links">
+        <% for (const project of projects) { %>
+          <li><a href="/galeri/<%= project.id %>"><strong><%= project.title %></strong><%- icon('arrow-up-right', 17) %></a></li>
+        <% } %>
+      </ul>
+    <% } else { %>
+      <p class="muted-copy">Bagikan hasil rakitan setelah alatmu dikembalikan.</p>
+    <% } %>
+    <div class="dashboard-actions">
+      <a class="button button-small button-primary" href="/galeri/bagikan"><%- icon('camera', 16) %> Bagikan rakitan</a>
+      <a class="button button-small button-secondary" href="/galeri">Buka galeri</a>
+    </div>
+  </section>
+</div>
+
+<% if (kits.length) { %>
+  <section class="dashboard-section" aria-labelledby="next-kit">
+    <div class="section-heading">
+      <h2 id="next-kit" data-word-reveal>Kit untuk proyek berikutnya</h2>
+      <a href="/kit" class="button button-small button-secondary">Lihat semua</a>
+    </div>
+    <%- include('project-cards', { entries: kits, kind: 'kit' }) %>
+  </section>
+<% } %>

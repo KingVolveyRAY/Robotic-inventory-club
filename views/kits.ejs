@@ -1,0 +1,24 @@
+<%- include('partials/head', { title: 'Kit Proyek' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <section class="dashboard-banner kit-banner" aria-labelledby="kit-title">
+    <div>
+      <h1 id="kit-title" data-word-reveal>Kit Proyek</h1>
+      <p>Pilih rakitan, cek kelengkapan komponen, lalu pinjam semua alatnya dalam satu pengajuan.</p>
+      <a href="/galeri" class="button button-secondary"><%- icon('images', 18) %> Lihat rakitan klub</a>
+    </div>
+    <img src="/images/rover-lab.webp" alt="Rover empat roda untuk latihan robotik" width="1740" height="550" loading="eager">
+  </section>
+  <section class="dashboard-section" aria-labelledby="kit-list">
+    <div class="section-heading">
+      <h2 id="kit-list" data-word-reveal>Pilih proyek</h2>
+      <a href="/#katalog" class="button button-small button-secondary">Cari alat satuan</a>
+    </div>
+    <% if (kits.length) { %>
+      <%- include('partials/project-cards', { entries: kits, kind: 'kit' }) %>
+    <% } else { %>
+      <%- include('partials/empty', { glyph: 'package-open', title: 'Kit sedang disiapkan', description: 'Kit akan muncul setelah pengurus menyusun paket dari inventaris klub.', link: { href: '/#katalog', label: 'Buka katalog' } }) %>
+    <% } %>
+  </section>
+</main>
+<%- include('partials/footer') %>

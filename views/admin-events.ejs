@@ -1,0 +1,39 @@
+<%- include('partials/head', { title: 'Rencana Kegiatan' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Rencana kegiatan</h1>
+      <p>Siapkan kebutuhan alat per tim untuk lomba dan praktikum.</p>
+    </div>
+  </div>
+  <%- include('partials/admin-nav', { current: 'events' }) %>
+  <%- include('partials/feedback') %>
+  <div class="dashboard-columns event-columns">
+    <section class="panel dashboard-panel">
+      <div class="section-heading"><h2>Kegiatan klub</h2><%- icon('calendar-days', 22) %></div>
+      <% if (!events.length) { %>
+        <p class="muted-copy">Buat rencana kegiatan untuk mencatat kebutuhan tim.</p>
+      <% } else { %>
+        <ul class="dashboard-links">
+          <% for (const event of events) { %>
+            <li><a href="/admin/kegiatan/<%= event.id %>">
+              <span><strong><%= event.name %></strong><small><time datetime="<%= event.event_date %>"><%= formatDate(event.event_date) %></time></small></span>
+              <%- icon('arrow-up-right', 17) %>
+            </a></li>
+          <% } %>
+        </ul>
+      <% } %>
+    </section>
+    <section class="panel dashboard-panel">
+      <div class="section-heading"><h2>Buat kegiatan</h2></div>
+      <form class="form-stack" method="post" action="/admin/kegiatan" data-busy-label="Membuat…">
+        <%- include('partials/csrf') %>
+        <label class="field"><span>Nama kegiatan</span><input name="name" minlength="3" maxlength="90" placeholder="Contoh: lomba robot pengikut garis" required></label>
+        <label class="field"><span>Tanggal</span><input name="date" type="date" value="<%= today %>" required></label>
+        <button type="submit" class="button button-primary"><%- icon('plus', 18) %> Buat rencana</button>
+      </form>
+    </section>
+  </div>
+</main>
+<%- include('partials/footer') %>

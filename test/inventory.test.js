@@ -401,3 +401,143 @@ test('staff inventory paginates rows and keeps the current page through inventor
     await site.stop();
   }
 });
+
+test('a kit reserves all components together and holds damaged returns until service is complete', async (t) => {
+  const path = await tempDatabase(t);
+  const site = await startSite(path, { demo: true });
+  const inventory = await openInventory({ databasePath: path });
+  try {
+    const member = new Client(site);
+    const other = new Client(site);
+    const admin = new Client(site);
+    await register(member, 'Tim Utama', 'utama@example.test');
+    await register(other, 'Tim Cadangan', 'cadangan@example.test');
+    assert.equal((await admin.login(demoAccounts.admin)).status, 303);
+    assert.match((await admin.request('/admin')).html, /Dashboard Hari Ini/);
+    assert.match((await member.request('/peminjaman')).html, /Jadwal saya/);
+
+    const kit = await admin.post('/admin/kit', {
+      title: 'Kit Pengukur Jarak',
+      description: 'Latihan pengukuran jarak dan pengujian alat ukur di meja praktik.',
+      'alat-0': '3', 'jumlah-0': '2', 'alat-1': '5', 'jumlah-1': '1', active: '1',
+    });
+    assert.equal(kit.status, 303, kit.html);
+    const kitId = kit.location.match(/\/admin\/kit\/(\d+)/)[1];
+    assert.match((await member.request('/kit/' + kitId)).html, /<strong>4<\/strong> paket lengkap tersedia/);
+
+    const today = clubDate();
+    const form = { start: today, due: today, purpose: 'Mengukur jarak di kelas robotik', quantity: '4' };
+    for (const client of [member, other]) {
+      const request = await client.post('/kit/' + kitId + '/pinjam', form);
+      assert.equal(request.status, 303, request.html);
+    }
+    const memberHistory = await member.request('/peminjaman?status=pending');
+    assert.equal((memberHistory.html.match(/id="pinjaman-\d+"/g) ?? []).length, 1);
+    const ids = [loanId(memberHistory.html), loanId((await other.request('/peminjaman?status=pending')).html)];
+    const action = (id, type) => admin.post('/admin/peminjaman/' + id + '/tindakan', { action: type });
+    const decisions = await Promise.all(ids.map((id) => action(id, 'approve')));
+    assert.deepEqual(decisions.map((response) => response.status).sort(), [303, 409]);
+    const approvedId = ids[decisions.findIndex((response) => response.status === 303)];
+    const pendingId = ids[decisions.findIndex((response) => response.status === 409)];
+    assert.equal((await inventory.equipment(3)).available, 0);
+    assert.equal((await inventory.equipment(5)).available, 0);
+    assert.ok((await inventory.loanRequest(pendingId)).items.every((line) => line.status === 'pending'));
+
+    const approved = await inventory.loanRequest(approvedId);
+    assert.match((await admin.request('/admin?hari=ambil')).html, /Kit Pengukur Jarak/);
+    assert.equal((await action(approved.items[1].id, 'pickup')).status, 303);
+    assert.match((await admin.request('/admin?hari=kembali')).html, /Kit Pengukur Jarak/);
+    assert.equal((await member.request('/admin?alat=3')).status, 403);
+    assert.match((await admin.request('/admin?alat=3')).html, /Kit Pengukur Jarak/);
+    const guest = new Client(site);
+    assert.equal((await guest.request('/admin?alat=3')).location, '/masuk?lanjut=%2Fadmin%3Falat%3D3');
+    await guest.request('/masuk?lanjut=%2Fadmin%3Falat%3D3');
+    assert.equal((await guest.post('/masuk', { ...demoAccounts.admin, lanjut: '/admin?alat=3' })).location, '/admin?alat=3');
+    const qr = await fetch(site.url + '/admin/alat/3/label.png', { headers: { Cookie: admin.cookie } });
+    assert.equal(qr.status, 200);
+    assert.match(qr.headers.get('content-type'), /^image\/png/);
+    assert.equal(Buffer.from(await qr.arrayBuffer()).toString('hex', 0, 8), '89504e470d0a1a0a');
+
+    const returnPath = '/admin/peminjaman/' + approvedId + '/pengembalian';
+    assert.match((await admin.request(returnPath)).html, /Kondisi dan kelengkapan semua alat sudah diperiksa/);
+    const [sensor, meter] = approved.items;
+    const inspection = {
+      diperiksa: '1',
+      ['servis-' + sensor.id]: '1', ['catatan-' + sensor.id]: 'Satu konektor sensor perlu diganti.',
+      ['servis-' + meter.id]: '0', ['catatan-' + meter.id]: 'Kabel lengkap.',
+    };
+    assert.equal((await admin.post(returnPath, { ...inspection, ['servis-' + meter.id]: '5' })).status, 422);
+    assert.equal((await inventory.equipment(3)).available, 0);
+    assert.equal((await inventory.equipment(3)).service, 0);
+    const returned = await admin.post(returnPath, inspection);
+    assert.equal(returned.status, 303, returned.html);
+    assert.equal((await admin.post(returnPath, inspection)).status, 409);
+    assert.equal((await inventory.equipment(3)).available, 7);
+    assert.equal((await inventory.equipment(3)).service, 1);
+    assert.equal((await inventory.equipment(5)).available, 4);
+    assert.match((await admin.request('/admin/servis')).html, /Satu konektor sensor perlu diganti/);
+    assert.equal((await action(pendingId, 'approve')).status, 409);
+    const completed = await admin.post('/admin/servis/' + sensor.id + '/selesai');
+    assert.equal(completed.status, 303);
+    assert.equal((await inventory.equipment(3)).available, 8);
+    assert.match((await admin.request('/admin/servis?status=selesai')).html, /Satu konektor sensor perlu diganti/);
+    assert.equal((await action(pendingId, 'approve')).status, 303);
+  } finally {
+    await inventory.close();
+    await site.stop();
+  }
+});
+
+test('members publish a finished project with a photo and staff can plan team needs', async (t) => {
+  const site = await startSite(await tempDatabase(t), { demo: true });
+  try {
+    const admin = new Client(site);
+    const member = new Client(site);
+    const other = new Client(site);
+    await register(member, 'Pembuat Rakitan', 'pembuat@example.test');
+    await register(other, 'Anggota Lain', 'lain@example.test');
+    assert.equal((await admin.login(demoAccounts.admin)).status, 303);
+    assert.equal((await admin.request('/admin')).status, 200);
+    const today = clubDate();
+    const form = { quantity: '1', start: today, due: today, purpose: 'Sensor kelembapan untuk ruang praktik' };
+    assert.equal((await member.post('/alat/3/pinjam', form)).status, 303);
+    const id = loanId((await member.request('/peminjaman')).html);
+    for (const action of ['approve', 'pickup', 'return']) {
+      assert.equal((await admin.post('/admin/peminjaman/' + id + '/tindakan', { action })).status, 303);
+    }
+    const publication = { pinjaman: String(id), title: 'Pemantau Jarak Klub', description: 'Pengujian jarak pada lintasan latihan klub.', publik: '1' };
+    assert.equal((await other.post('/galeri/bagikan', publication)).status, 404);
+    const data = new FormData();
+    for (const [name, value] of Object.entries({ ...publication, _csrf: member.csrf })) data.append(name, value);
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/azru1IAAAAASUVORK5CYII=', 'base64');
+    data.append('photo', new File([png], 'rakitan.png', { type: 'image/png' }));
+    const created = await fetch(site.url + '/galeri/bagikan', { method: 'POST', redirect: 'manual', headers: { Cookie: member.cookie }, body: data });
+    assert.equal(created.status, 303, await created.text());
+    const path = created.headers.get('location').split('?')[0];
+    assert.match((await other.request(path)).html, /Pinjam alat proyek ini/);
+    const image = await fetch(site.url + path + '/foto');
+    assert.equal(image.status, 200);
+    assert.deepEqual(Buffer.from(await image.arrayBuffer()), png);
+    assert.equal((await other.post(path + '/hapus')).status, 403);
+    assert.equal((await other.post(path + '/pinjam', form)).status, 303);
+    assert.equal((await member.post(path + '/hapus')).status, 303);
+    assert.equal((await other.request(path)).status, 404);
+    assert.equal((await other.request(path + '/foto')).status, 404);
+
+    const event = await admin.post('/admin/kegiatan', { name: 'Latihan tim robot', date: shiftDate(today, 7) });
+    assert.equal(event.status, 303, event.html);
+    const eventPath = event.location.split('?')[0];
+    assert.equal((await member.request(eventPath)).status, 403);
+    for (const team of ['Tim Alfa', 'Tim Beta']) {
+      const need = await admin.post(eventPath + '/kebutuhan', { team, alat: '3', quantity: '5' });
+      assert.equal(need.status, 303, need.html);
+    }
+    const plan = await admin.request(eventPath);
+    assert.match(plan.html, /10 dibutuhkan · 8 tersedia/);
+    assert.match(plan.html, /Kurang 2 unit/);
+    assert.match(plan.html, /Tim Alfa/);
+    assert.match(plan.html, /Tim Beta/);
+  } finally {
+    await site.stop();
+  }
+});

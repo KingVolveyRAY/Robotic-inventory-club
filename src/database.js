@@ -1,5 +1,6 @@
 import { openPostgres, openSqlite } from './db-driver.js';
-import { ADMIN_USERNAME, AppError } from './domain.js';
+import { ADMIN_USERNAME, AppError, validateReturnInspection } from './domain.js';
+import { labRecords, labSchema } from './lab-records.js';
 
 const metadataSchema = `
   CREATE TABLE IF NOT EXISTS metadata (
@@ -84,13 +85,37 @@ const staffActions = new Map([
 const loanDetails = `
   SELECT loans.*, equipment.name AS equipment_name, equipment.category,
     equipment.image, equipment.active AS equipment_active,
-    users.name AS borrower, users.email AS borrower_email
+    users.name AS borrower, users.email AS borrower_email, loan_groups.title AS group_title,
+    return_checks.note AS inspection_note, return_checks.service_quantity, return_checks.resolved_on,
+    gallery_projects.id AS project_id
   FROM loans
   JOIN equipment ON equipment.id = loans.equipment_id
   JOIN users ON users.id = loans.user_id
+  LEFT JOIN loan_groups ON loan_groups.id = loans.group_id
+  LEFT JOIN return_checks ON return_checks.loan_id = loans.id
+  LEFT JOIN gallery_projects ON gallery_projects.loan_id = loans.id
 `;
 
 const inventoryList = 'SELECT * FROM inventory ORDER BY active DESC, LOWER(name), id';
+
+function assembleRequests(rows) {
+  const requests = new Map();
+  for (const row of rows) {
+    const key = row.group_id ? `kit-${row.group_id}` : row.id;
+    if (!requests.has(key)) {
+      requests.set(key, { ...row, title: row.group_title ?? row.equipment_name, items: [], quantity: 0 });
+    }
+    const request = requests.get(key);
+    request.id = Math.min(request.id, row.id);
+    request.quantity += row.quantity;
+    request.items.push(row);
+    request.project_id ??= row.project_id;
+  }
+  return [...requests.values()].map((request) => {
+    request.items.sort((a, b) => a.id - b.id);
+    return request;
+  });
+}
 
 function records(connection) {
   const query = (sql, ...parameters) => connection.query(sql, parameters);
@@ -100,6 +125,7 @@ function records(connection) {
 
   return {
     query,
+    ...labRecords({ query, first }),
     userByEmail: (email) => first('SELECT * FROM users WHERE email = ?', email),
     adminByUsername: (username) => first("SELECT * FROM users WHERE username = ? AND role = 'admin'", username),
     async createUser(name, email, passwordHash, role, { username = null, passwordRevision = 0 } = {}) {
@@ -141,21 +167,26 @@ function records(connection) {
       `, item.name, item.category, item.description, item.total, item.active, item.image ?? null);
       return row.id;
     },
-    async loan(id) {
-      const loan = await first('SELECT * FROM loans WHERE id = ?', id);
+    async loanRequest(id) {
+      const loan = await first(loanDetails + ' WHERE loans.id = ?', id);
       if (!loan) throw new AppError(404, 'Peminjaman ini tidak ditemukan.');
-      return loan;
+      const lines = loan.group_id ? await query(loanDetails + ' WHERE loans.group_id = ? ORDER BY loans.id', loan.group_id) : [loan];
+      return assembleRequests(lines)[0];
     },
-    async addLoan(itemId, userId, form, status = 'pending') {
+    async addLoan(itemId, userId, form, status = 'pending', groupId = null) {
       const row = await first(`
-        INSERT INTO loans (equipment_id, user_id, quantity, start_date, due_date, purpose, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
-      `, itemId, userId, form.quantity, form.start, form.due, form.purpose, status);
+        INSERT INTO loans (equipment_id, user_id, quantity, start_date, due_date, purpose, status, group_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+      `, itemId, userId, form.quantity, form.start, form.due, form.purpose, status, groupId);
       return row.id;
     },
     setLoanStatus: (id, status) => query('UPDATE loans SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', status, id),
-    memberLoans: (userId) => query(loanDetails + ' WHERE loans.user_id = ? ORDER BY loans.updated_at DESC, loans.id DESC', userId),
-    adminLoans: () => query(loanDetails + ' ORDER BY loans.updated_at DESC, loans.id DESC'),
+    async memberLoans(userId) {
+      return assembleRequests(await query(loanDetails + ' WHERE loans.user_id = ? ORDER BY loans.updated_at DESC, loans.id DESC', userId));
+    },
+    async adminLoans() {
+      return assembleRequests(await query(loanDetails + ' ORDER BY loans.updated_at DESC, loans.id DESC'));
+    },
     async hasMetadata(name) {
       return Boolean(await first('SELECT value FROM metadata WHERE name = ?', name));
     },
@@ -181,6 +212,10 @@ export async function openInventory({ databasePath, databaseUrl }) {
         `, ADMIN_USERNAME);
         await database.setMetadata('schema:v2', '1');
       }
+      if (!await database.hasMetadata('schema:v3')) {
+        await connection.script(labSchema(driver.dialect === 'postgres'));
+        await database.setMetadata('schema:v3', '1');
+      }
     });
   } catch (error) {
     await driver.close();
@@ -196,8 +231,9 @@ export async function openInventory({ databasePath, databaseUrl }) {
     updateEquipment(id, form) {
       return transaction(async (database) => {
         const item = await database.equipment(id);
-        if (form.total < item.reserved) {
-          throw new AppError(409, `Total stok minimal ${item.reserved} unit karena unit itu sedang dipinjam atau dipesan.`);
+        const unavailable = item.reserved + item.service;
+        if (form.total < unavailable) {
+          throw new AppError(409, `Total stok minimal ${unavailable} unit karena unit itu sedang dipesan, dipinjam, atau diservis.`);
         }
         await database.query(
           'UPDATE equipment SET name = ?, category = ?, description = ?, total = ?, active = ? WHERE id = ?',
@@ -215,36 +251,60 @@ export async function openInventory({ databasePath, databaseUrl }) {
         return database.addLoan(itemId, userId, form);
       });
     },
+    requestBundle(source, id, userId, form) {
+      return transaction(async (database) => {
+        const bundle = source === 'kit' ? await database.kit(id) : await database.project(id);
+        if (!bundle.active) throw new AppError(404, 'Kit proyek ini tidak ditampilkan.');
+        if (form.quantity > bundle.available) {
+          throw new AppError(409, 'Stok komponen belum cukup untuk jumlah paket ini.');
+        }
+        const groupId = await database.addLoanGroup(bundle.title);
+        for (const part of bundle.parts) {
+          await database.addLoan(part.equipment_id, userId, { ...form, quantity: form.quantity * part.quantity }, 'pending', groupId);
+        }
+      });
+    },
     cancelLoan(id, userId) {
       return transaction(async (database) => {
-        const loan = await database.loan(id);
+        const loan = await database.loanRequest(id);
         if (loan.user_id !== userId) throw new AppError(404, 'Peminjaman ini tidak ditemukan.');
         if (loan.status !== 'pending' && loan.status !== 'approved') {
           throw new AppError(409, 'Pengajuan ini tidak bisa dibatalkan.');
         }
-        await database.setLoanStatus(id, 'cancelled');
+        for (const line of loan.items) await database.setLoanStatus(line.id, 'cancelled');
       });
     },
-    async advanceLoan(id, action, today) {
+    async advanceLoan(id, action, today, inspection) {
       const transition = staffActions.get(action);
       if (!transition) throw new AppError(400, 'Tindakan peminjaman tidak dikenal.');
 
       await transaction(async (database) => {
-        const loan = await database.loan(id);
-        if (loan.status !== transition.from) {
+        const loan = await database.loanRequest(id);
+        if (loan.items.some((line) => line.status !== transition.from)) {
           throw new AppError(409, 'Status pengajuan sudah berubah. Muat ulang daftar peminjaman.');
         }
         if (action === 'approve') {
-          const item = await database.equipment(loan.equipment_id);
           if (loan.due_date < today) throw new AppError(409, 'Tanggal kembali pengajuan ini sudah lewat.');
-          if (!item.active || item.available < loan.quantity) {
-            throw new AppError(409, 'Stok yang dapat dipinjam belum cukup untuk menyetujui pengajuan ini.');
+          for (const line of loan.items) {
+            const item = await database.equipment(line.equipment_id);
+            if (!item.active || item.available < line.quantity) {
+              throw new AppError(409, `Stok ${item.name} belum cukup untuk menyetujui pengajuan ini.`);
+            }
           }
         }
         if (action === 'pickup' && (today < loan.start_date || today > loan.due_date)) {
           throw new AppError(409, 'Catat pengambilan dalam rentang tanggal pinjaman.');
         }
-        await database.setLoanStatus(id, transition.to);
+        if (action === 'return' && (loan.group_id || inspection) && inspection?.diperiksa !== '1') {
+          throw new AppError(422, 'Konfirmasi bahwa semua alat sudah diperiksa.');
+        }
+        for (const line of loan.items) {
+          if (action === 'return') {
+            const check = inspection ? validateReturnInspection(line, inspection) : { quantity: 0, note: '' };
+            await database.recordReturn(line.id, check.quantity, check.note, today);
+          }
+          await database.setLoanStatus(line.id, transition.to);
+        }
       });
       return transition.to;
     },

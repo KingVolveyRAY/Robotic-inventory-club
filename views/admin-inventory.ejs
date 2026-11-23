@@ -27,6 +27,7 @@
             <th scope="col">Nama alat</th>
             <th scope="col">Tersedia</th>
             <th scope="col">Dipesan / dipinjam</th>
+            <th scope="col">Servis</th>
             <th scope="col">Total</th>
             <th scope="col">Katalog</th>
             <th scope="col"><span class="sr-only">Tindakan</span></th>
@@ -38,9 +39,15 @@
               <th scope="row"><%= item.name %><small><%= categoryById[item.category].name %></small></th>
               <td><strong><%= item.available %></strong></td>
               <td><%= item.reserved %></td>
+              <td><%= item.service %></td>
               <td><%= item.total %></td>
               <td><span class="badge badge-<%= item.active ? 'green' : 'muted' %>"><%= item.active ? 'Tayang' : 'Disembunyikan' %></span></td>
-              <td><a class="button button-small button-secondary" href="/admin/alat/<%= item.id %><%= pageQuery %>" aria-label="Edit <%= item.name %>"><%- icon('pencil', 15) %> Edit</a></td>
+              <td>
+                <div class="inventory-row-actions">
+                  <a class="button button-small button-secondary" href="/admin/alat/<%= item.id %><%= pageQuery %>" aria-label="Edit <%= item.name %>"><%- icon('pencil', 15) %> Edit</a>
+                  <a class="button button-small button-secondary" href="/admin/alat/<%= item.id %>/label<%= pageQuery %>" aria-label="Label QR <%= item.name %>"><%- icon('qr-code', 15) %> QR</a>
+                </div>
+              </td>
             </tr>
           <% } %>
         </tbody>

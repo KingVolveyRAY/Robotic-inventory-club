@@ -1,0 +1,25 @@
+<div class="project-grid">
+  <% for (const item of entries) { %>
+    <% const isKit = kind === 'kit'; const href = (isKit ? '/kit/' : '/galeri/') + item.id; %>
+    <article class="panel project-card" data-reveal>
+      <div class="project-cover">
+        <% if (item.photo_type) { %>
+          <img src="/galeri/<%= item.id %>/foto" alt="Rakitan <%= item.title %>" width="680" height="380" loading="lazy">
+        <% } else { %>
+          <%- include('equipment-image', { item: { name: item.title, category: item.category, image: item.image }, eager: false }) %>
+        <% } %>
+        <% if (isKit) { %>
+          <span class="badge badge-<%= item.available ? 'green' : 'amber' %>"><%= item.available ? item.available + ' kit siap dipinjam' : 'Komponen terbatas' %></span>
+        <% } %>
+      </div>
+      <div class="project-card-content">
+        <% if (!isKit) { %><small>Rakitan oleh <%= item.author %></small><% } %>
+        <h3><%= item.title %></h3>
+        <% if (isKit) { %><p><%= item.description %></p><% } %>
+        <a class="button button-small button-secondary" href="<%= href %>" aria-label="<%= isKit ? 'Lihat kit ' : 'Lihat rakitan ' %><%= item.title %>">
+          <%= isKit ? 'Lihat kit' : 'Lihat rakitan' %> <%- icon('arrow-up-right', 15) %>
+        </a>
+      </div>
+    </article>
+  <% } %>
+</div>

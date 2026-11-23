@@ -35,28 +35,7 @@
       <% } else { %>
         <p class="page-description">Pilih jadwal dan jumlah alat. Pengurus akan meninjau pengajuanmu.</p>
         <form class="form-stack" action="/alat/<%= item.id %>/pinjam" method="post" data-loan-days="<%= maxLoanDays %>" data-busy-label="Mengirim pengajuan…">
-          <%- include('partials/csrf') %>
-          <label class="field">
-            <span>Jumlah unit</span>
-            <input name="quantity" type="number" min="1" max="<%= item.available %>" value="<%= values.quantity %>" required>
-            <small><%= item.available %> unit tersedia.</small>
-          </label>
-          <div class="field-row">
-            <label class="field">
-              <span>Tanggal ambil</span>
-              <input name="start" type="date" min="<%= today %>" max="<%= lastStart %>" value="<%= values.start %>" required>
-            </label>
-            <label class="field">
-              <span>Tanggal kembali</span>
-              <input name="due" type="date" min="<%= today %>" max="<%= lastDue %>" value="<%= values.due %>" required>
-            </label>
-          </div>
-          <p class="field-hint">Maksimal <%= maxLoanDays %> hari, termasuk hari pengambilan.</p>
-          <label class="field">
-            <span>Keperluan</span>
-            <textarea name="purpose" placeholder="Contoh: praktik perakitan robot…" rows="3" minlength="5" maxlength="300" required><%= values.purpose %></textarea>
-          </label>
-          <button class="button button-primary button-wide" type="submit">Kirim pengajuan <%- icon('arrow-right', 17) %></button>
+          <%- include('partials/loan-form-fields', { quantityLabel: 'Jumlah unit', available: item.available }) %>
         </form>
       <% } %>
     </section>

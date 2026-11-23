@@ -11,6 +11,7 @@ import {
   staffTabs, statuses, validEmail, validateEquipment, validateLoan,
 } from './domain.js';
 import { addMissingEquipment, missingEquipment } from './equipment-samples.js';
+import { mountLabRoutes, parseProjectPhoto } from './lab-routes.js';
 import {
   catalogData, icon, initials, inventoryPageNumber, inventoryPageQuery, inventoryPagination, sorts,
 } from './presentation.js';
@@ -30,14 +31,22 @@ const feedback = new Map([
   ['approved', 'Pengajuan disetujui. Stok sudah dipesan untuk anggota.'],
   ['declined', 'Pengajuan ditolak.'],
   ['borrowed', 'Pengambilan alat tercatat.'],
-  ['returned', 'Pengembalian tercatat dan stok tersedia kembali.'],
+  ['returned', 'Pengembalian tercatat. Unit yang lolos pemeriksaan kembali tersedia.'],
   ['disimpan', 'Data alat berhasil disimpan.'],
   ['paket-draf', 'Paket alat disimpan sebagai draf. Isi stok dan tampilkan alat yang tersedia.'],
   ['paket-lengkap', 'Semua alat di paket sudah ada di inventaris.'],
+  ['kit-disimpan', 'Kit proyek berhasil disimpan.'],
+  ['rakitan-terbit', 'Rakitanmu sudah terbit di Galeri Rakitan.'],
+  ['rakitan-dihapus', 'Rakitan sudah dihapus dari galeri.'],
+  ['servis-selesai', 'Pemeriksaan selesai. Unit kembali ke stok siap dipinjam.'],
+  ['kegiatan-disimpan', 'Rencana kegiatan berhasil disimpan.'],
+  ['kebutuhan-disimpan', 'Kebutuhan tim sudah dicatat.'],
+  ['kebutuhan-dihapus', 'Kebutuhan alat sudah dihapus dari rencana.'],
 ]);
 
 function safeNext(value) {
-  if (value === '/peminjaman' || (typeof value === 'string' && /^\/alat\/[1-9]\d{0,9}$/.test(value))) {
+  if (value === '/peminjaman' || value === '/galeri/bagikan' ||
+    (typeof value === 'string' && (/^\/(alat|kit|galeri)\/[1-9]\d{0,9}$/.test(value) || /^\/admin\?alat=[1-9]\d{0,9}$/.test(value)))) {
     return value;
   }
   return '';
@@ -51,7 +60,10 @@ function requireUser(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (!res.locals.user) return res.redirect(303, '/masuk');
+  if (!res.locals.user) {
+    const aim = req.path === '/admin' ? safeNext('/admin?alat=' + asText(req.query.alat)) : '';
+    return res.redirect(303, aim ? '/masuk?lanjut=' + encodeURIComponent(aim) : '/masuk');
+  }
   if (res.locals.user.role !== 'admin') {
     throw new AppError(403, 'Halaman ini khusus untuk pengurus klub.');
   }
@@ -132,7 +144,8 @@ export async function createApp({
   });
   if (catalogOnly) {
     app.use((req, _res, next) => {
-      const catalogPage = req.path === '/' || req.path === '/panduan' || /^\/alat\/[1-9]\d{0,9}$/.test(req.path);
+      const catalogPage = ['/', '/panduan', '/kit', '/galeri'].includes(req.path) ||
+        /^\/(alat|kit|galeri)\/[1-9]\d{0,9}$/.test(req.path) || /^\/galeri\/[1-9]\d{0,9}\/foto$/.test(req.path);
       if (!catalogPage || !['GET', 'HEAD'].includes(req.method)) {
         throw new AppError(404, 'Pratinjau ini menampilkan katalog dan panduan peminjaman.');
       }
@@ -140,6 +153,7 @@ export async function createApp({
     });
   }
   app.use(express.urlencoded({ extended: false, limit: '16kb', parameterLimit: 24 }));
+  app.post('/galeri/bagikan', requireUser, parseProjectPhoto);
   app.post(/.*/, (req, _res, next) => {
     if (!checkCsrf(req.session, req.body?._csrf)) {
       throw new AppError(403, 'Sesi formulir sudah berakhir. Muat ulang halaman, lalu coba lagi.');
@@ -170,7 +184,9 @@ export async function createApp({
   });
 
   app.get('/', async (req, res) => {
-    res.render('catalog', { ...catalogData(await inventory.catalog(), req.query), page: 'catalog' });
+    const catalog = catalogData(await inventory.catalog(), req.query);
+    const kits = catalog.search || catalog.category ? [] : (await inventory.listKits()).slice(0, 2);
+    res.render('catalog', { ...catalog, kits, page: 'catalog' });
   });
 
   app.get('/panduan', (_req, res) => res.render('guide', { page: 'guide' }));
@@ -261,10 +277,22 @@ export async function createApp({
 
   app.get('/peminjaman', requireUser, async (req, res) => {
     const allLoans = await inventory.memberLoans(res.locals.user.id);
-    const filter = filterValue(req.query.status, memberTabs);
-    const loans = allLoans.filter((loan) => filter === 'all' ||
-      (filter === 'history') === historyStatuses.has(loan.status));
-    res.render('loans', { page: 'loans', loans, filter, tabs: memberTabs });
+    const selectedStatus = ['pending', 'approved', 'borrowed'].includes(req.query.status) ? req.query.status : null;
+    const filter = selectedStatus ? 'active' : filterValue(req.query.status, memberTabs);
+    const loans = allLoans.filter((loan) => selectedStatus ? loan.status === selectedStatus :
+      filter === 'all' || (filter === 'history') === historyStatuses.has(loan.status));
+    const overview = req.query.status === undefined;
+    const timeline = allLoans.filter((loan) => ['approved', 'borrowed'].includes(loan.status))
+      .map((loan) => ({ loan, date: loan.status === 'approved' ? loan.start_date : loan.due_date }))
+      .sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
+    const counts = Object.fromEntries(['pending', 'approved', 'borrowed'].map((status) => [
+      status, allLoans.filter((loan) => loan.status === status).length,
+    ]));
+    res.render('loans', {
+      page: 'loans', loans, filter, tabs: memberTabs, overview, timeline, counts, selectedStatus,
+      kits: overview ? (await inventory.listKits()).sort((a, b) => b.available - a.available).slice(0, 2) : [],
+      projects: overview ? await inventory.listProjects(2) : [],
+    });
   });
 
   app.post('/peminjaman/:id/batal', requireUser, async (req, res) => {
@@ -278,8 +306,20 @@ export async function createApp({
     const counts = Object.fromEntries(staffTabs.map(({ id }) => [
       id, allLoans.filter((loan) => id === 'history' ? historyStatuses.has(loan.status) : loan.status === id).length,
     ]));
-    const loans = allLoans.filter((loan) => filter === 'history' ? historyStatuses.has(loan.status) : loan.status === filter);
-    res.render('admin', { page: 'admin', filter, loans, counts, tabs: staffTabs });
+    const today = res.locals.today;
+    const tasks = {
+      ambil: { label: 'Siap diserahkan', loans: allLoans.filter((loan) => loan.status === 'approved' && loan.start_date <= today && loan.due_date >= today) },
+      kembali: { label: 'Kembali hari ini', loans: allLoans.filter((loan) => loan.status === 'borrowed' && loan.due_date === today) },
+      terlambat: { label: 'Terlambat kembali', loans: allLoans.filter((loan) => loan.status === 'borrowed' && loan.due_date < today) },
+    };
+    const task = Object.hasOwn(tasks, req.query.hari) ? tasks[req.query.hari] : null;
+    const equipment = req.query.alat === undefined ? null : await inventory.equipment(recordId(req.query.alat));
+    const overview = !task && !equipment && req.query.status === undefined;
+    const loans = equipment
+      ? allLoans.filter((loan) => ['approved', 'borrowed'].includes(loan.status) && loan.items.some((line) => line.equipment_id === equipment.id))
+      : task?.loans ?? allLoans.filter((loan) => filter === 'history' ? historyStatuses.has(loan.status) : loan.status === filter);
+    const serviceUnits = overview ? (await inventory.serviceList()).reduce((total, row) => total + row.service_quantity, 0) : 0;
+    res.render('admin', { page: 'admin', overview, tasks, task, equipment, serviceUnits, filter, loans, counts, tabs: staffTabs });
   });
 
   app.post('/admin/peminjaman/:id/tindakan', requireAdmin, async (req, res) => {
@@ -334,6 +374,8 @@ export async function createApp({
       showInventoryForm(req, res, item, values, error.message, error.status);
     }
   });
+
+  mountLabRoutes(app, inventory, { requireUser, requireAdmin });
 
   app.use((_req, _res, next) => next(new AppError(404, 'Halaman yang kamu cari tidak ditemukan.')));
   app.use((error, req, res, next) => {

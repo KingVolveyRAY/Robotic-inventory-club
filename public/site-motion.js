@@ -23,10 +23,10 @@
       }, { duration: 0.44, ease: [0.22, 0.8, 0.24, 1] }));
     }, { margin: '0px 0px 12px' });
 
-    const stopHover = hover('.equipment-card', (card) => {
+    const stopHover = hover('.equipment-card, .project-card', (card) => {
       let state = hoverStates.get(card);
       if (!state) {
-        const image = card.querySelector('.card-media img');
+        const image = card.querySelector('.card-media img, .project-cover img');
         const progress = motionValue(0);
         const unsubscribe = progress.on('change', (value) => {
           // The individual translate property composes with the entrance transform.

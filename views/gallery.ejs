@@ -1,0 +1,20 @@
+<%- include('partials/head', { title: 'Galeri Rakitan Klub' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Galeri Rakitan Klub</h1>
+      <p>Temukan hasil proyek anggota dan lihat alat yang mereka gunakan.</p>
+    </div>
+    <% if (!catalogOnly) { %>
+      <a class="button button-primary" href="/galeri/bagikan"><%- icon('camera', 18) %> Bagikan rakitan</a>
+    <% } %>
+  </div>
+  <%- include('partials/feedback') %>
+  <% if (projects.length) { %>
+    <%- include('partials/project-cards', { entries: projects, kind: 'project' }) %>
+  <% } else { %>
+    <%- include('partials/empty', { glyph: 'images', title: 'Belum ada rakitan yang dibagikan', description: 'Setelah mengembalikan alat, anggota bisa membagikan foto dan cerita proyeknya di sini.', link: { href: '/kit', label: 'Jelajahi Kit Proyek' } }) %>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

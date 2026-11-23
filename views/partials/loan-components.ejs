@@ -1,0 +1,7 @@
+<% if (loan.group_id) { %>
+  <ul class="component-list compact-components" aria-label="Isi pengajuan">
+    <% for (const line of loan.items) { %>
+      <li><span><%= line.equipment_name %></span><strong><%= line.quantity %> unit</strong></li>
+    <% } %>
+  </ul>
+<% } %>
