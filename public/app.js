@@ -133,3 +133,13 @@ for (const button of document.querySelectorAll('[data-print-label]')) {
   button.hidden = false;
   button.addEventListener('click', () => window.print());
 }
+
+for (const select of document.querySelectorAll('[data-event-kind]')) {
+  const schedule = select.form.querySelector('[data-event-schedule]');
+  const dateLabel = select.form.querySelector('[data-event-date-label]');
+  select.addEventListener('change', () => {
+    const announcement = select.value === 'pengumuman';
+    schedule.hidden = announcement;
+    dateLabel.textContent = announcement ? 'Tanggal terbit' : 'Tanggal kegiatan';
+  });
+}

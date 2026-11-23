@@ -1,0 +1,39 @@
+<%- include('partials/head', { title: 'Agenda Klub' }) %>
+<%- include('partials/header') %>
+<main id="konten" class="shell inner-main">
+  <a class="back-link" href="/peminjaman"><%- icon('arrow-left', 17) %> Kembali ke dashboard anggota</a>
+  <div class="page-heading">
+    <div>
+      <h1 data-word-reveal>Agenda klub</h1>
+      <p>Jadwal latihan, lomba, dan pengumuman dari pengurus.</p>
+    </div>
+    <% if (user.role === 'admin') { %><a class="button button-secondary" href="/admin/kegiatan"><%- icon('pencil', 17) %> Kelola agenda</a><% } %>
+  </div>
+  <div class="dashboard-columns agenda-columns">
+    <section aria-labelledby="upcoming-events">
+      <div class="section-heading"><h2 id="upcoming-events" data-word-reveal>Jadwal mendatang</h2><%- icon('calendar-days', 22) %></div>
+      <% if (agenda.upcoming.length) { %>
+        <%- include('partials/agenda-items', { events: agenda.upcoming, compact: false }) %>
+      <% } else { %>
+        <p class="panel dashboard-panel muted-copy">Belum ada jadwal mendatang. Jadwal yang dipublikasikan pengurus akan muncul di sini.</p>
+      <% } %>
+    </section>
+    <section aria-labelledby="club-news">
+      <div class="section-heading"><h2 id="club-news" data-word-reveal>Pengumuman</h2><%- icon('megaphone', 22) %></div>
+      <% if (agenda.announcements.length) { %>
+        <div class="agenda-items">
+          <% for (const event of agenda.announcements) { %>
+            <article class="panel dashboard-panel agenda-news" id="pengumuman-<%= event.id %>" data-reveal>
+              <time class="agenda-meta" datetime="<%= event.event_date %>"><%= formatDate(event.event_date) %></time>
+              <h3><%= event.name %></h3>
+              <p class="agenda-description"><%= event.description %></p>
+            </article>
+          <% } %>
+        </div>
+      <% } else { %>
+        <p class="panel dashboard-panel muted-copy">Belum ada pengumuman dari pengurus.</p>
+      <% } %>
+    </section>
+  </div>
+</main>
+<%- include('partials/footer') %>

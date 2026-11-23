@@ -1,6 +1,6 @@
 import { openPostgres, openSqlite } from './db-driver.js';
 import { ADMIN_USERNAME, AppError, validateReturnInspection } from './domain.js';
-import { labRecords, labSchema } from './lab-records.js';
+import { agendaSchema, labRecords, labSchema } from './lab-records.js';
 
 const metadataSchema = `
   CREATE TABLE IF NOT EXISTS metadata (
@@ -215,6 +215,10 @@ export async function openInventory({ databasePath, databaseUrl }) {
       if (!await database.hasMetadata('schema:v3')) {
         await connection.script(labSchema(driver.dialect === 'postgres'));
         await database.setMetadata('schema:v3', '1');
+      }
+      if (!await database.hasMetadata('schema:v4')) {
+        await connection.script(agendaSchema);
+        await database.setMetadata('schema:v4', '1');
       }
     });
   } catch (error) {

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
+import { agendaData, agendaDay, agendaTime, eventKinds, eventVisibility } from './agenda.js';
 import { checkCsrf, createSessions, hashPassword, matchesPassword, validPassword } from './auth.js';
 import { openInventory } from './database.js';
 import {
@@ -45,7 +46,7 @@ const feedback = new Map([
 ]);
 
 function safeNext(value) {
-  if (value === '/peminjaman' || value === '/galeri/bagikan' ||
+  if (value === '/peminjaman' || value === '/galeri/bagikan' || value === '/agenda' ||
     (typeof value === 'string' && (/^\/(alat|kit|galeri)\/[1-9]\d{0,9}$/.test(value) || /^\/admin\?alat=[1-9]\d{0,9}$/.test(value)))) {
     return value;
   }
@@ -101,6 +102,7 @@ export async function createApp({
   Object.assign(app.locals, {
     icon, initials, categories, categoryById, statuses, sorts, demo, demoAccounts, sampleInventory, catalogOnly,
     formatDate, inventoryPageQuery, maxLoanDays: MAX_LOAN_DAYS, maxAdvanceDays: MAX_ADVANCE_DAYS,
+    agendaDay, agendaTime, eventKinds, eventVisibility,
     user: null, page: '',
   });
 
@@ -292,6 +294,7 @@ export async function createApp({
       page: 'loans', loans, filter, tabs: memberTabs, overview, timeline, counts, selectedStatus,
       kits: overview ? (await inventory.listKits()).sort((a, b) => b.available - a.available).slice(0, 2) : [],
       projects: overview ? await inventory.listProjects(2) : [],
+      agenda: overview ? agendaData(await inventory.publishedEvents(), res.locals.today) : null,
     });
   });
 

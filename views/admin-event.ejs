@@ -1,20 +1,39 @@
 <%- include('partials/head', { title: event.name }) %>
 <%- include('partials/header') %>
 <main id="konten" class="shell inner-main">
+  <% const visibility = eventVisibility(event, today); const kind = eventKinds[event.kind]; %>
   <a class="back-link" href="/admin/kegiatan"><%- icon('arrow-left', 17) %> Semua kegiatan</a>
   <div class="page-heading">
     <div>
       <h1 data-word-reveal><%= event.name %></h1>
-      <p><time datetime="<%= event.event_date %>"><%= formatDate(event.event_date) %></time> · <%= new Set(event.needs.map(row => row.team)).size %> tim</p>
+      <p><%= kind.label %> · <time datetime="<%= event.event_date %>"><%= formatDate(event.event_date) %></time><%= agendaTime(event) ? ' · ' + agendaTime(event) : '' %><%= event.location ? ' · ' + event.location : '' %></p>
+      <% if (event.repeat_until) { %><p class="agenda-repeat"><%- icon('repeat', 14) %> Setiap <%= agendaDay(event.event_date) %> sampai <%= formatDate(event.repeat_until) %></p><% } %>
+      <% if (event.description) { %><p class="agenda-description"><%= event.description %></p><% } %>
+    </div>
+    <div class="event-header-actions">
+      <span class="badge badge-<%= visibility.tone %>"><%= visibility.label %></span>
+      <% if (visibility.label === 'Tayang') { %>
+        <a class="button button-small button-secondary" href="/agenda#<%= event.kind === 'pengumuman' ? 'pengumuman' : 'kegiatan' %>-<%= event.id %>">Lihat di agenda <%- icon('arrow-up-right', 16) %></a>
+      <% } %>
     </div>
   </div>
   <%- include('partials/feedback') %>
+  <details class="panel dashboard-panel event-edit" <%= error ? 'open' : '' %>>
+    <summary>Ubah jadwal dan publikasi</summary>
+    <form class="form-stack" method="post" action="/admin/kegiatan/<%= event.id %>" data-busy-label="Menyimpan…">
+      <%- include('partials/csrf') %>
+      <%- include('partials/event-fields', { values }) %>
+      <button type="submit" class="button button-secondary"><%- icon('check', 18) %> Simpan perubahan</button>
+    </form>
+  </details>
+  <% if (event.kind !== 'pengumuman') { %>
+  <div class="dashboard-section">
   <section class="panel dashboard-panel" aria-labelledby="event-stock">
     <div class="section-heading">
       <h2 id="event-stock" data-word-reveal>Rekap kebutuhan alat</h2>
       <span class="badge badge-<%= totals.some(item => item.shortage) ? 'amber' : 'green' %>"><%= totals.filter(item => item.shortage).length %> jenis kurang</span>
     </div>
-    <p class="muted-copy">Perkiraan kebutuhan dibandingkan dengan stok siap dipinjam saat ini.</p>
+    <p class="muted-copy"><%= new Set(event.needs.map(row => row.team)).size %> tim · Perbandingan dengan stok siap dipinjam saat ini.</p>
     <% if (totals.length) { %>
       <ul class="component-list event-totals">
         <% for (const item of totals) { %>
@@ -62,14 +81,7 @@
       <% } %>
     </section>
   </div>
-  <details class="panel dashboard-panel event-edit">
-    <summary>Ubah jadwal atau nama</summary>
-    <form class="form-stack" method="post" action="/admin/kegiatan/<%= event.id %>" data-busy-label="Menyimpan…">
-      <%- include('partials/csrf') %>
-      <label class="field"><span>Nama kegiatan</span><input name="name" value="<%= event.name %>" minlength="3" maxlength="90" required></label>
-      <label class="field"><span>Tanggal</span><input name="date" type="date" value="<%= event.event_date %>" required></label>
-      <button type="submit" class="button button-secondary"><%- icon('check', 18) %> Simpan perubahan</button>
-    </form>
-  </details>
+  </div>
+  <% } %>
 </main>
 <%- include('partials/footer') %>

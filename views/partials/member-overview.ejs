@@ -2,7 +2,7 @@
   <div>
     <p class="dashboard-label">Dashboard anggota</p>
     <h1 id="member-title" data-word-reveal>Halo, <%= user.name.split(/\s+/)[0] %>!</h1>
-    <p>Pantau jadwal alatmu dan temukan kit untuk rakitan berikutnya.</p>
+    <p>Pantau jadwal alatmu dan cek <a class="dashboard-text-link" href="/agenda">agenda klub</a> sebelum latihan berikutnya.</p>
     <div class="dashboard-actions">
       <a class="button button-primary" href="/kit"><%- icon('package-check', 18) %> Jelajahi kit</a>
       <a class="button button-secondary" href="/#katalog"><%- icon('search', 18) %> Cari alat</a>
@@ -18,6 +18,26 @@
 </div>
 
 <div class="dashboard-columns">
+  <section class="panel dashboard-panel member-agenda" aria-labelledby="club-agenda">
+    <div class="section-heading">
+      <h2 id="club-agenda" data-word-reveal>Agenda klub</h2>
+      <%- icon('calendar-days', 22) %>
+    </div>
+    <% if (agenda.upcoming.length) { %>
+      <%- include('agenda-items', { events: agenda.upcoming.slice(0, 2), compact: true }) %>
+    <% } else { %>
+      <p class="muted-copy">Belum ada jadwal klub yang akan datang.</p>
+    <% } %>
+    <% if (agenda.announcements.length) { %>
+      <% const announcement = agenda.announcements[0]; %>
+      <a class="agenda-announcement-link" href="/agenda#pengumuman-<%= announcement.id %>">
+        <%- icon('megaphone', 17) %><span><small>Pengumuman</small><strong><%= announcement.name %></strong></span><%- icon('arrow-up-right', 15) %>
+      </a>
+    <% } %>
+    <div class="dashboard-actions">
+      <a class="button button-small button-secondary" href="/agenda">Lihat semua agenda <%- icon('arrow-right', 16) %></a>
+    </div>
+  </section>
   <section class="panel dashboard-panel" aria-labelledby="my-schedule">
     <div class="section-heading">
       <h2 id="my-schedule" data-word-reveal>Jadwal saya</h2>
@@ -44,25 +64,6 @@
       <p class="muted-copy">Jadwal ambil dan kembali akan tampil saat ada pinjaman yang disetujui.</p>
     <% } %>
   </section>
-  <section class="panel dashboard-panel member-gallery" aria-labelledby="shared-work">
-    <div class="section-heading">
-      <h2 id="shared-work" data-word-reveal>Rakitan klub</h2>
-      <%- icon('images', 22) %>
-    </div>
-    <% if (projects.length) { %>
-      <ul class="dashboard-links">
-        <% for (const project of projects) { %>
-          <li><a href="/galeri/<%= project.id %>"><strong><%= project.title %></strong><%- icon('arrow-up-right', 17) %></a></li>
-        <% } %>
-      </ul>
-    <% } else { %>
-      <p class="muted-copy">Bagikan hasil rakitan setelah alatmu dikembalikan.</p>
-    <% } %>
-    <div class="dashboard-actions">
-      <a class="button button-small button-primary" href="/galeri/bagikan"><%- icon('camera', 16) %> Bagikan rakitan</a>
-      <a class="button button-small button-secondary" href="/galeri">Buka galeri</a>
-    </div>
-  </section>
 </div>
 
 <% if (kits.length) { %>
@@ -74,3 +75,23 @@
     <%- include('project-cards', { entries: kits, kind: 'kit' }) %>
   </section>
 <% } %>
+
+<section class="panel dashboard-panel member-gallery dashboard-section" aria-labelledby="shared-work">
+  <div class="section-heading">
+    <h2 id="shared-work" data-word-reveal>Rakitan klub</h2>
+    <%- icon('images', 22) %>
+  </div>
+  <% if (projects.length) { %>
+    <ul class="dashboard-links">
+      <% for (const project of projects) { %>
+        <li><a href="/galeri/<%= project.id %>"><strong><%= project.title %></strong><%- icon('arrow-up-right', 17) %></a></li>
+      <% } %>
+    </ul>
+  <% } else { %>
+    <p class="muted-copy">Bagikan hasil rakitan setelah alatmu dikembalikan.</p>
+  <% } %>
+  <div class="dashboard-actions">
+    <a class="button button-small button-primary" href="/galeri/bagikan"><%- icon('camera', 16) %> Bagikan rakitan</a>
+    <a class="button button-small button-secondary" href="/galeri">Buka galeri</a>
+  </div>
+</section>

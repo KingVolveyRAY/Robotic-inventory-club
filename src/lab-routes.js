@@ -1,6 +1,7 @@
 import multer from 'multer';
 import QRCode from 'qrcode';
-import { AppError, asText, MAX_ADVANCE_DAYS, MAX_LOAN_DAYS, recordId, shiftDate, validDate, validateLoan } from './domain.js';
+import { agendaData, eventForm, validateEvent } from './agenda.js';
+import { AppError, asText, MAX_ADVANCE_DAYS, MAX_LOAN_DAYS, recordId, shiftDate, validateLoan } from './domain.js';
 
 const kitSlots = 8;
 const photoLimit = 2 * 1024 * 1024;
@@ -81,6 +82,11 @@ function eventTotals(needs) {
 }
 
 export function mountLabRoutes(app, inventory, { requireUser, requireAdmin }) {
+  app.get('/agenda', requireUser, async (_req, res) => {
+    const agenda = agendaData(await inventory.publishedEvents(), res.locals.today);
+    res.render('agenda', { page: 'agenda', agenda });
+  });
+
   app.get('/kit', async (_req, res) => {
     res.render('kits', { page: 'kits', kits: await inventory.listKits() });
   });
@@ -234,23 +240,36 @@ export function mountLabRoutes(app, inventory, { requireUser, requireAdmin }) {
     res.type('png').send(await QRCode.toBuffer(target.href, { width: 300, margin: 3 }));
   });
 
-  app.get('/admin/kegiatan', requireAdmin, async (_req, res) => {
-    res.render('admin-events', { page: 'admin', events: await inventory.events() });
-  });
-
-  async function showEvent(res, id) {
-    const event = await inventory.event(id);
-    const totals = eventTotals(event.needs);
-    res.render('admin-event', { page: 'admin', event, totals, equipment: await inventory.inventory() });
+  async function showEvents(res, { values, error = '', status = 200 } = {}) {
+    res.status(status).render('admin-events', {
+      page: 'admin', events: await inventory.events(), error,
+      values: values ?? eventForm({ date: res.locals.today, kind: 'latihan', published: '1' }),
+    });
   }
 
-  app.get('/admin/kegiatan/:id', requireAdmin, (req, res) => showEvent(res, recordId(req.params.id)));
+  app.get('/admin/kegiatan', requireAdmin, (_req, res) => showEvents(res));
+
+  async function showEvent(res, event, { values = event, error = '', status = 200 } = {}) {
+    const totals = eventTotals(event.needs);
+    res.status(status).render('admin-event', {
+      page: 'admin', event, totals, equipment: event.kind === 'pengumuman' ? [] : await inventory.inventory(),
+      values, error,
+    });
+  }
+
+  app.get('/admin/kegiatan/:id', requireAdmin, async (req, res) => showEvent(res, await inventory.event(recordId(req.params.id))));
   app.post(['/admin/kegiatan', '/admin/kegiatan/:id'], requireAdmin, async (req, res) => {
-    const name = asText(req.body.name);
-    const date = asText(req.body.date);
-    if (name.length < 3 || name.length > 90 || !validDate(date)) throw new AppError(422, 'Isi nama kegiatan (3–90 karakter) dan tanggal yang valid.');
-    const id = await inventory.saveEvent(req.params.id ? recordId(req.params.id) : null, name, date);
-    res.redirect(303, '/admin/kegiatan/' + id + '?hasil=kegiatan-disimpan');
+    const event = req.params.id ? await inventory.event(recordId(req.params.id)) : null;
+    const values = eventForm(req.body, event);
+    try {
+      const id = await inventory.saveEvent(event?.id, validateEvent(values));
+      res.redirect(303, '/admin/kegiatan/' + id + '?hasil=kegiatan-disimpan');
+    } catch (error) {
+      if (!(error instanceof AppError) || error.status !== 422) throw error;
+      const options = { values, status: error.status, error: error.message };
+      if (event) await showEvent(res, event, options);
+      else await showEvents(res, options);
+    }
   });
   app.post('/admin/kegiatan/:id/kebutuhan', requireAdmin, async (req, res) => {
     const id = recordId(req.params.id);

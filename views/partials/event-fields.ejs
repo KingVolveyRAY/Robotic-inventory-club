@@ -1,0 +1,32 @@
+<label class="field"><span>Judul agenda</span><input name="name" value="<%= values.name %>" minlength="3" maxlength="90" placeholder="Contoh: latihan sensor dan motor" required></label>
+<div class="field-row">
+  <label class="field">
+    <span>Jenis agenda</span>
+    <select name="kind" data-event-kind required>
+      <% for (const [id, kind] of Object.entries(eventKinds)) { %>
+        <option value="<%= id %>" <%= values.kind === id ? 'selected' : '' %>><%= kind.label %></option>
+      <% } %>
+    </select>
+  </label>
+  <label class="field">
+    <span data-event-date-label><%= values.kind === 'pengumuman' ? 'Tanggal terbit' : 'Tanggal kegiatan' %></span>
+    <input name="date" type="date" value="<%= values.event_date %>" required>
+  </label>
+</div>
+<div class="event-schedule-fields" data-event-schedule <%= values.kind === 'pengumuman' ? 'hidden' : '' %>>
+  <div class="field-row">
+    <label class="field"><span>Jam mulai (WIB)</span><input name="start_time" type="time" value="<%= values.start_time %>"></label>
+    <label class="field"><span>Jam selesai (WIB)</span><input name="end_time" type="time" value="<%= values.end_time %>"></label>
+  </div>
+  <label class="field"><span>Lokasi</span><input name="location" value="<%= values.location %>" maxlength="120" placeholder="Contoh: Lab Robotik"></label>
+  <label class="field">
+    <span>Ulangi mingguan sampai</span>
+    <input name="repeat_until" type="date" value="<%= values.repeat_until %>">
+    <small>Kosongkan untuk agenda sekali. Pengulangan mengikuti hari dari tanggal kegiatan.</small>
+  </label>
+</div>
+<label class="field">
+  <span>Detail agenda</span>
+  <textarea name="description" rows="4" maxlength="1800" placeholder="Materi latihan, perlengkapan yang dibawa, atau isi pengumuman"><%= values.description %></textarea>
+</label>
+<label class="check-field"><input name="published" type="checkbox" value="1" <%= values.published ? 'checked' : '' %>><span>Tampilkan di agenda anggota</span></label>

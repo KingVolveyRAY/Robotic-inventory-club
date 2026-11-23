@@ -80,6 +80,18 @@ export function labSchema(postgres) {
   `;
 }
 
+export const agendaSchema = `
+  ALTER TABLE club_events ADD COLUMN kind TEXT NOT NULL DEFAULT 'kegiatan'
+    CHECK (kind IN ('latihan', 'lomba', 'kegiatan', 'pengumuman'));
+  ALTER TABLE club_events ADD COLUMN description TEXT NOT NULL DEFAULT '';
+  ALTER TABLE club_events ADD COLUMN location TEXT NOT NULL DEFAULT '';
+  ALTER TABLE club_events ADD COLUMN start_time TEXT NOT NULL DEFAULT '';
+  ALTER TABLE club_events ADD COLUMN end_time TEXT NOT NULL DEFAULT '';
+  ALTER TABLE club_events ADD COLUMN repeat_until TEXT NOT NULL DEFAULT '';
+  ALTER TABLE club_events ADD COLUMN published INTEGER NOT NULL DEFAULT 0 CHECK (published IN (0, 1));
+  CREATE INDEX club_events_published ON club_events(event_date) WHERE published = 1;
+`;
+
 const selectedPart = 'i.id AS equipment_id, i.name AS equipment_name, i.active AS equipment_active, i.available, i.image, i.category';
 const kitDetails = `
   SELECT k.id, k.title, k.description, k.active, p.quantity, ${selectedPart}
@@ -183,6 +195,7 @@ export function labRecords({ query, first }) {
     },
     removeProject: (id) => query('DELETE FROM gallery_projects WHERE id = ?', id),
     events: () => query('SELECT * FROM club_events ORDER BY event_date DESC, id DESC'),
+    publishedEvents: () => query('SELECT * FROM club_events WHERE published = 1'),
     async event(id) {
       const event = await first('SELECT * FROM club_events WHERE id = ?', id);
       if (!event) throw new AppError(404, 'Kegiatan ini tidak ditemukan.');
@@ -193,14 +206,17 @@ export function labRecords({ query, first }) {
       `, id);
       return { ...event, needs };
     },
-    async saveEvent(id, name, date) {
+    async saveEvent(id, event) {
+      const fields = [event.name, event.event_date, event.kind, event.description, event.location,
+        event.start_time, event.end_time, event.repeat_until, event.published];
       if (id) {
-        const changed = await first('UPDATE club_events SET name = ?, event_date = ? WHERE id = ? RETURNING id',
-          name, date, id);
+        const changed = await first(`UPDATE club_events SET name = ?, event_date = ?, kind = ?, description = ?,
+          location = ?, start_time = ?, end_time = ?, repeat_until = ?, published = ? WHERE id = ? RETURNING id`, ...fields, id);
         if (!changed) throw new AppError(404, 'Kegiatan ini tidak ditemukan.');
         return changed.id;
       }
-      return (await first('INSERT INTO club_events (name, event_date) VALUES (?, ?) RETURNING id', name, date)).id;
+      return (await first(`INSERT INTO club_events (name, event_date, kind, description, location, start_time, end_time, repeat_until, published)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`, ...fields)).id;
     },
     addEventNeed: (eventId, team, itemId, quantity) => query(`
       INSERT INTO event_needs (event_id, team, equipment_id, quantity) VALUES (?, ?, ?, ?)

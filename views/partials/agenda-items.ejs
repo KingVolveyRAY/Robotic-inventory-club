@@ -1,0 +1,26 @@
+<ul class="agenda-items<%= compact ? ' agenda-items-compact' : '' %>">
+  <% for (const event of events) { %>
+    <% const kind = eventKinds[event.kind]; const hours = agendaTime(event); %>
+    <li class="agenda-item" <% if (!compact) { %>id="kegiatan-<%= event.id %>" data-reveal<% } %>>
+      <time class="agenda-date" datetime="<%= event.date %>">
+        <span class="sr-only"><%= formatDate(event.date) %></span>
+        <strong aria-hidden="true"><%= Number(event.date.slice(-2)) %></strong>
+        <span aria-hidden="true"><%= formatDate(event.date).split(' ')[1] %> <%= event.date.slice(0, 4) %></span>
+      </time>
+      <div class="agenda-item-info">
+        <span class="badge badge-<%= kind.tone %>"><%- icon(kind.glyph, 13) %> <%= kind.label %></span>
+        <h3>
+          <% if (compact) { %><a href="/agenda#kegiatan-<%= event.id %>"><%= event.name %></a><% } else { %><%= event.name %><% } %>
+        </h3>
+        <p class="agenda-meta">
+          <span><%= event.date === today ? 'Hari ini' : agendaDay(event.date) %><%= hours ? ' · ' + hours : '' %></span>
+          <% if (event.location) { %><span><%- icon('map-pin', 14) %> <%= event.location %></span><% } %>
+        </p>
+        <% if (event.repeat_until) { %>
+          <p class="agenda-repeat"><%- icon('repeat', 14) %> Setiap <%= agendaDay(event.event_date) %><%= compact ? '' : ' sampai ' + formatDate(event.repeat_until) %></p>
+        <% } %>
+        <% if (!compact && event.description) { %><p class="agenda-description"><%= event.description %></p><% } %>
+      </div>
+    </li>
+  <% } %>
+</ul>

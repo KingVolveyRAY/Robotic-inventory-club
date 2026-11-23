@@ -541,3 +541,70 @@ test('members publish a finished project with a photo and staff can plan team ne
     await site.stop();
   }
 });
+
+test('published club agendas show upcoming weekly dates and release announcements on schedule', async (t) => {
+  const site = await startSite(await tempDatabase(t), { demo: true });
+  try {
+    const member = new Client(site);
+    const admin = new Client(site);
+    const guest = new Client(site);
+    assert.equal((await guest.request('/agenda')).location, '/masuk?lanjut=%2Fagenda');
+    await register(member, 'Murid Robotik', 'murid@example.test');
+    assert.equal((await admin.login(demoAccounts.admin)).status, 303);
+    assert.equal((await admin.request('/admin/kegiatan')).status, 200);
+
+    const today = clubDate();
+    const training = {
+      name: 'Latihan Mingguan Pengujian Sensor',
+      kind: 'latihan',
+      date: shiftDate(today, -6),
+      repeat_until: shiftDate(today, 8),
+      start_time: '15:30',
+      end_time: '17:00',
+      location: 'Lab Tim Barat',
+      description: 'Bawa laptop dan catatan hasil percobaan.',
+      published: '1',
+    };
+    assert.equal((await member.post('/admin/kegiatan', training)).status, 403);
+    const invalidTime = await admin.post('/admin/kegiatan', { ...training, end_time: '15:00' });
+    assert.equal(invalidTime.status, 422);
+    assert.match(invalidTime.html, /pilih waktu setelah jam mulai/);
+    assert.equal((await admin.post('/admin/kegiatan', { ...training, repeat_until: today })).status, 422);
+
+    const saved = await admin.post('/admin/kegiatan', training);
+    assert.equal(saved.status, 303, saved.html);
+    const eventPath = saved.location.split('?')[0];
+    const eventId = eventPath.split('/').at(-1);
+    const need = await admin.post(eventPath + '/kebutuhan', { team: 'Rencana Internal Tim Barat', alat: '3', quantity: '2' });
+    assert.equal(need.status, 303);
+
+    for (const event of [
+      { name: 'Lomba Robot Kabupaten', kind: 'lomba', date: shiftDate(today, 9), published: '1' },
+      { name: 'Latihan Draf Tim Inti', kind: 'latihan', date: today },
+      { name: 'Pengumuman Pendaftaran Besok', kind: 'pengumuman', date: shiftDate(today, 1), description: 'Informasi pendaftaran tim.', published: '1' },
+      { name: 'Pengumuman Pertemuan Hari Ini', kind: 'pengumuman', date: today, description: 'Temui pengurus sebelum latihan.', published: '1' },
+      { name: 'Lomba Yang Sudah Selesai', kind: 'lomba', date: shiftDate(today, -1), published: '1' },
+    ]) {
+      const response = await admin.post('/admin/kegiatan', event);
+      assert.equal(response.status, 303, response.html);
+    }
+
+    const dashboard = await member.request('/peminjaman');
+    assert.match(dashboard.html, /Agenda klub/);
+    assert.match(dashboard.html, /Latihan Mingguan Pengujian Sensor/);
+    assert.match(dashboard.html, /Pengumuman Pertemuan Hari Ini/);
+    const agenda = await member.request('/agenda');
+    assert.match(agenda.html, new RegExp('id="kegiatan-' + eventId + '"[\\s\\S]*?datetime="' + shiftDate(today, 1) + '"'));
+    assert.match(agenda.html, /15\.30–17\.00 WIB/);
+    assert.match(agenda.html, /Lab Tim Barat/);
+    assert.match(agenda.html, /Lomba Robot Kabupaten/);
+    assert.match(agenda.html, /Pengumuman Pertemuan Hari Ini/);
+    assert.doesNotMatch(agenda.html, /Latihan Draf Tim Inti|Pengumuman Pendaftaran Besok|Rencana Internal Tim Barat|Lomba Yang Sudah Selesai/);
+
+    assert.equal((await admin.post(eventPath, { ...training, published: '0' })).status, 303);
+    assert.doesNotMatch((await member.request('/agenda')).html, /Latihan Mingguan Pengujian Sensor/);
+    assert.match((await admin.request(eventPath)).html, /Rencana Internal Tim Barat/);
+  } finally {
+    await site.stop();
+  }
+});

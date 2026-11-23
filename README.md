@@ -26,6 +26,10 @@ Di **Pinjaman**, anggota punya dashboard jadwal pribadi, Kit Proyek, dan Galeri 
 
 Di **Panel Pengurus**, kartu **Dashboard Hari Ini** membuka antrean yang perlu ditangani. Checklist pengembalian menyimpan catatan kondisi dan menahan unit yang perlu diperbaiki sampai ditandai selesai di **Servis**. **Inventaris** menyediakan label QR per jenis alat untuk membuka daftar serah terima, dan **Kegiatan** membandingkan kebutuhan tim dengan stok siap dipinjam saat ini.
 
+Gunakan **Panel Pengurus → Kegiatan** untuk menambahkan latihan, lomba, kegiatan, atau pengumuman. Isi tanggal, waktu WIB, dan tanggal akhir pengulangan untuk latihan mingguan. Agenda yang dipublikasikan muncul di **Pinjaman → Agenda klub** dan pengumuman tampil mulai tanggal terbitnya.
+
+Tombol **Musik** membuka tiga instrumental orisinal dari aset lokal. Pemutar mengingat lagu, posisi, dan volume dalam tab yang sama.
+
 ## Jalankan untuk inventaris klub
 
 1. Jalankan `npm ci` dari root repositori.

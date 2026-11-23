@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { eventForm } from './agenda.js';
 import { hashPassword, validPassword } from './auth.js';
 import { ADMIN_USERNAME, clubDate, normalizeEmail, shiftDate, validEmail } from './domain.js';
 import { addMissingEquipment, equipmentSamples, expandedEquipment, starterEquipment } from './equipment-samples.js';
@@ -33,6 +34,7 @@ export async function prepareData(inventory, { demo, admin, sampleInventory }) {
     await seedSampleCatalog(inventory, demo);
     await seedLabExamples(inventory, demo);
   }
+  if (demo) await seedAgenda(inventory);
 }
 
 async function seedLabExamples(inventory, demo) {
@@ -81,12 +83,37 @@ async function seedLabExamples(inventory, demo) {
       }
       const distanceSensor = items.get('sensor-hc-sr04.webp');
       if (distanceSensor) {
-        const event = await database.saveEvent(null, 'Praktikum Robot Bergerak', shiftDate(today, 7));
+        const event = await database.saveEvent(null, eventForm({ name: 'Praktikum Robot Bergerak', date: shiftDate(today, 7) }));
         await database.addEventNeed(event, 'Tim Rover', distanceSensor.id, 5);
         await database.addEventNeed(event, 'Tim Sensor', distanceSensor.id, 4);
       }
     }
     await database.setMetadata('sample-projects:v1', '1');
+  });
+}
+
+async function seedAgenda(inventory) {
+  await inventory.transaction(async (database) => {
+    if (await database.hasMetadata('sample-agenda:v1')) return;
+    const today = clubDate();
+    const examples = [
+      {
+        name: 'Latihan sensor dan kendali motor', kind: 'latihan', date: shiftDate(today, 2),
+        start_time: '15:30', end_time: '17:00', repeat_until: shiftDate(today, 30), location: 'Lab Robotik',
+        description: 'Bawa laptop dan kabel USB. Kita akan mencoba sensor garis, lalu menguji kendali kecepatan motor bersama tim.',
+      },
+      {
+        name: 'Simulasi lomba robot pengikut garis', kind: 'lomba', date: shiftDate(today, 16),
+        start_time: '09:00', end_time: '12:00', location: 'Aula sekolah',
+        description: 'Setiap tim membawa robot yang sudah diuji untuk menjalankan dua putaran lintasan.',
+      },
+      {
+        name: 'Pendaftaran tim praktik dibuka', kind: 'pengumuman', date: today,
+        description: 'Sampaikan nama tim dan pilihan proyek kepada pengurus saat latihan berikutnya.',
+      },
+    ];
+    for (const example of examples) await database.saveEvent(null, eventForm({ ...example, published: '1' }));
+    await database.setMetadata('sample-agenda:v1', '1');
   });
 }
 

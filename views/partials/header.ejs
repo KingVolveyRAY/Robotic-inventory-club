@@ -46,6 +46,7 @@
             <% } else { %>
               <a href="/peminjaman" <%= page === 'loans' ? 'aria-current=page' : '' %>><%- icon('layout-dashboard', 17) %> Dashboard Anggota</a>
             <% } %>
+            <a href="/agenda" <%= page === 'agenda' ? 'aria-current=page' : '' %>><%- icon('calendar-days', 17) %> Agenda Klub</a>
             <form action="/keluar" method="post">
               <%- include('csrf') %>
               <button type="submit"><%- icon('log-out', 17) %> Keluar</button>
@@ -56,3 +57,4 @@
     </div>
   </div>
 </header>
+<%- include('music-player') %>
