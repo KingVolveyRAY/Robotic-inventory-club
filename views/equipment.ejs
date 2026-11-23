@@ -10,7 +10,7 @@
       </div>
       <div class="equipment-detail-copy">
         <span class="card-category"><%= categoryById[item.category].name %></span>
-        <h1><%= item.name %></h1>
+        <h1 data-word-reveal><%= item.name %></h1>
         <p><%= item.description %></p>
         <dl class="detail-stock">
           <div><dt>Tersedia</dt><dd><%= item.available %> unit</dd></div>
@@ -21,7 +21,7 @@
 
     <section class="panel detail-form">
       <span class="page-icon"><%- icon('clipboard-list', 24) %></span>
-      <h2>Ajukan peminjaman</h2>
+      <h2 data-word-reveal>Ajukan peminjaman</h2>
       <%- include('partials/feedback') %>
       <% if (catalogOnly) { %>
         <p class="page-description">Katalog ini berisi inventaris contoh. Pengajuan online memerlukan koneksi database klub.</p>

@@ -4,7 +4,7 @@
   <a class="back-link" href="/admin/alat<%= pageQuery %>"><%- icon('arrow-left', 17) %> Kembali ke inventaris</a>
   <div class="panel equipment-editor">
     <span class="page-icon"><%- icon(item ? 'pencil' : 'package-plus', 24) %></span>
-    <h1><%= item ? 'Edit alat' : 'Tambah alat' %></h1>
+    <h1 data-word-reveal><%= item ? 'Edit alat' : 'Tambah alat' %></h1>
     <p class="page-description">Informasi ini akan membantu anggota memilih alat yang tepat.</p>
     <%- include('partials/feedback') %>
     <form class="form-stack" action="/admin/alat<%= item ? '/' + item.id : '' %><%= pageQuery %>" method="post">

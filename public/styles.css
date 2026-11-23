@@ -614,10 +614,9 @@ summary::-webkit-details-marker {
   font-size: clamp(2.65rem, 4.5vw, 4.4rem);
   line-height: 1.02;
   letter-spacing: -.075em;
-  animation: settle-in 460ms var(--ease) both;
 }
 
-.hero h1 span {
+.hero-highlight {
   display: inline-block;
   max-width: 100%;
   margin-top: 6px;
@@ -627,6 +626,11 @@ summary::-webkit-details-marker {
   color: var(--lime);
   line-height: .98;
   white-space: nowrap;
+}
+
+.heading-word {
+  display: inline-block;
+  max-inline-size: 100%;
 }
 
 .hero p {
@@ -2195,7 +2199,7 @@ summary::-webkit-details-marker {
     font-size: 1.9rem;
   }
 
-  .hero h1 span {
+  .hero-highlight {
     white-space: normal;
   }
 

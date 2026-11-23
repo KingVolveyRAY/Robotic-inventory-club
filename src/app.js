@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
@@ -17,6 +18,10 @@ import { demoAccounts, prepareData } from './seed.js';
 
 const file = (path) => fileURLToPath(new URL(path, import.meta.url));
 const publicPath = file('../public');
+const motionScripts = new Map([
+  ['gsap.min.js', readFileSync(new URL('../node_modules/gsap/dist/gsap.min.js', import.meta.url))],
+  ['ScrollTrigger.min.js', readFileSync(new URL('../node_modules/gsap/dist/ScrollTrigger.min.js', import.meta.url))],
+]);
 const feedback = new Map([
   ['diajukan', 'Pengajuan terkirim. Kamu bisa memantau statusnya di sini.'],
   ['cancelled', 'Peminjaman dibatalkan.'],
@@ -97,6 +102,11 @@ export async function createApp({
     },
   }));
   app.use(express.static(publicPath, { index: false, maxAge: '1h' }));
+  app.get('/motion/:script', (req, res, next) => {
+    const script = motionScripts.get(req.params.script);
+    if (!script) return next();
+    res.type('js').set('Cache-Control', 'public, max-age=86400').send(script);
+  });
   app.get('/healthz', async (_req, res) => {
     await inventory.ready();
     res.json({ ok: true });
