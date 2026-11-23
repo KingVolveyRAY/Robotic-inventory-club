@@ -1,0 +1,23 @@
+<div class="inventory-pagination">
+  <p>Menampilkan <strong><%= paging.first.toLocaleString('id-ID') %><% if (paging.last > paging.first) { %>–<%= paging.last.toLocaleString('id-ID') %><% } %></strong> dari <strong><%= paging.total.toLocaleString('id-ID') %></strong> alat</p>
+  <% if (paging.pageCount > 1) { %>
+    <nav class="inventory-pagination-controls" aria-label="Halaman inventaris <%= position %>">
+      <% if (paging.number > 1) { %>
+        <a class="button button-small button-secondary" href="/admin/alat<%= inventoryPageQuery(paging.number - 1) %>" rel="prev" aria-label="Halaman sebelumnya"><%- icon('chevron-left', 18) %></a>
+      <% } else { %>
+        <span class="button button-small pagination-disabled" aria-hidden="true"><%- icon('chevron-left', 18) %></span>
+      <% } %>
+      <% for (const [index, number] of paging.numbers.entries()) { %>
+        <% if (index > 0 && number - paging.numbers[index - 1] > 1) { %>
+          <span class="pagination-gap" aria-hidden="true">…</span>
+        <% } %>
+        <a class="button button-small button-secondary" href="/admin/alat<%= inventoryPageQuery(number) %>" aria-label="Halaman <%= number.toLocaleString('id-ID') %>" <%= number === paging.number ? 'aria-current=page' : '' %>><%= number.toLocaleString('id-ID') %></a>
+      <% } %>
+      <% if (paging.number < paging.pageCount) { %>
+        <a class="button button-small button-secondary" href="/admin/alat<%= inventoryPageQuery(paging.number + 1) %>" rel="next" aria-label="Halaman berikutnya"><%- icon('chevron-right', 18) %></a>
+      <% } else { %>
+        <span class="button button-small pagination-disabled" aria-hidden="true"><%- icon('chevron-right', 18) %></span>
+      <% } %>
+    </nav>
+  <% } %>
+</div>

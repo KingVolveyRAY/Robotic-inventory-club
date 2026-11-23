@@ -1657,7 +1657,62 @@ summary::-webkit-details-marker {
   gap: 8px;
 }
 
+.inventory-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-block: 13px;
+}
+
+.inventory-pagination p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.inventory-pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.inventory-pagination-controls .button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-pagination-controls [aria-current] {
+  background: var(--lime);
+}
+
+.pagination-disabled {
+  opacity: .45;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.pagination-gap {
+  padding-inline: 2px;
+  color: var(--muted);
+}
+
+@media (max-width: 420px) {
+  .inventory-pagination-controls {
+    gap: 4px;
+  }
+
+  .inventory-pagination-controls .button {
+    min-width: 32px;
+    padding-inline: 5px;
+  }
+}
+
 .inventory-table {
+  position: relative;
   overflow: auto;
 }
 

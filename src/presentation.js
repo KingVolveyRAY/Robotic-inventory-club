@@ -15,6 +15,7 @@ export const sorts = [
 ];
 
 const compareName = new Intl.Collator('id-ID', { sensitivity: 'base' }).compare;
+const inventoryPageSize = 10;
 
 export function catalogData(items, query) {
   const search = typeof query.q === 'string' ? query.q.trim().slice(0, 80) : '';
@@ -51,4 +52,32 @@ export function catalogData(items, query) {
 
 export function initials(name) {
   return name.split(/\s+/).slice(0, 2).map((word) => Array.from(word)[0]).join('').toUpperCase();
+}
+
+export function inventoryPageNumber(value) {
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) return 1;
+  const number = Number(value);
+  return Number.isSafeInteger(number) ? number : 1;
+}
+
+export function inventoryPageQuery(number, result) {
+  const parameters = new URLSearchParams();
+  if (number > 1) parameters.set('halaman', number);
+  if (result) parameters.set('hasil', result);
+  return parameters.size ? '?' + parameters : '';
+}
+
+export function inventoryPagination(total, requested) {
+  const pageCount = Math.max(1, Math.ceil(total / inventoryPageSize));
+  const number = Math.min(inventoryPageNumber(requested), pageCount);
+  const offset = (number - 1) * inventoryPageSize;
+  const numbers = pageCount <= 5
+    ? Array.from({ length: pageCount }, (_, index) => index + 1)
+    : [...new Set([1, number - 1, number, number + 1, pageCount])]
+      .filter((page) => page >= 1 && page <= pageCount);
+  return {
+    total, number, pageCount, numbers, offset, limit: inventoryPageSize,
+    first: total ? offset + 1 : 0,
+    last: Math.min(offset + inventoryPageSize, total),
+  };
 }

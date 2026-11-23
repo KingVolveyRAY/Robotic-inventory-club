@@ -90,6 +90,8 @@ const loanDetails = `
   JOIN users ON users.id = loans.user_id
 `;
 
+const inventoryList = 'SELECT * FROM inventory ORDER BY active DESC, LOWER(name), id';
+
 function records(connection) {
   const query = (sql, ...parameters) => connection.query(sql, parameters);
   async function first(sql, ...parameters) {
@@ -124,7 +126,9 @@ function records(connection) {
     deleteUserSessions: (id) => query('DELETE FROM sessions WHERE user_id = ?', id),
     expireSessions: (now) => query('DELETE FROM sessions WHERE expires_at <= ?', now),
     catalog: () => query('SELECT * FROM inventory WHERE active = 1 ORDER BY id'),
-    inventory: () => query('SELECT * FROM inventory ORDER BY active DESC, LOWER(name), id'),
+    inventory: () => query(inventoryList),
+    inventorySummary: () => query('SELECT name, category, image FROM equipment'),
+    inventoryPage: (limit, offset) => query(inventoryList + ' LIMIT ? OFFSET ?', limit, offset),
     async equipment(id) {
       const item = await first('SELECT * FROM inventory WHERE id = ?', id);
       if (!item) throw new AppError(404, 'Alat ini tidak ditemukan.');

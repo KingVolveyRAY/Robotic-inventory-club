@@ -352,3 +352,52 @@ test('only staff can import missing equipment as hidden drafts with images', asy
     await site.stop();
   }
 });
+
+test('staff inventory paginates rows and keeps the current page through inventory forms', async (t) => {
+  const site = await startSite(await tempDatabase(t), { demo: true });
+  try {
+    const admin = new Client(site);
+    assert.equal((await admin.login(demoAccounts.admin)).location, '/admin');
+
+    const rowIds = (html) => [...html.matchAll(/href="\/admin\/alat\/(\d+)(?:\?halaman=\d+)?" aria-label="Edit /g)]
+      .map((match) => match[1]);
+    const first = await admin.request('/admin/alat');
+    const second = await admin.request('/admin/alat?halaman=2');
+    const third = await admin.request('/admin/alat?halaman=3');
+    const pages = [first, second, third];
+    assert.deepEqual(pages.map((response) => rowIds(response.html).length), [10, 10, 10]);
+    assert.equal(new Set(pages.flatMap((response) => rowIds(response.html))).size, 30);
+    assert.match(second.html, /Menampilkan <strong>11–20<\/strong> dari <strong>30<\/strong> alat/);
+    assert.match(second.html, /aria-label="Halaman 2" aria-current=page/);
+
+    const high = await admin.request('/admin/alat?halaman=999');
+    assert.deepEqual(rowIds(high.html), rowIds(third.html));
+    const invalid = await admin.request('/admin/alat?halaman=-2');
+    assert.deepEqual(rowIds(invalid.html), rowIds(first.html));
+
+    const editPath = '/admin/alat/' + rowIds(second.html)[0] + '?halaman=2';
+    const form = await admin.request(editPath);
+    assert.equal(form.status, 200);
+    assert.match(form.html, /href="\/admin\/alat\?halaman=2">[\s\S]*Kembali ke inventaris/);
+
+    const item = { name: 'Alat dari halaman kedua', description: 'Alat yang diperbarui di halaman kedua.', category: 'kit', active: '1' };
+    const rejected = await admin.post(editPath, { ...item, total: '-1' });
+    assert.equal(rejected.status, 422);
+    assert.ok(rejected.html.includes('action="' + editPath + '"'));
+
+    const saved = await admin.post(editPath, { ...item, total: '4' });
+    assert.equal(saved.location, '/admin/alat?halaman=2&hasil=disimpan');
+
+    const add = await admin.request('/admin/alat/baru?halaman=3');
+    assert.match(add.html, /action="\/admin\/alat\?halaman=3"/);
+    assert.match(add.html, /href="\/admin\/alat\?halaman=3">Batal/);
+    const added = await admin.post('/admin/alat?halaman=3', { ...item, name: 'Alat tambahan untuk paginasi', total: '1' });
+    assert.equal(added.location, '/admin/alat?halaman=3&hasil=disimpan');
+
+    const last = await admin.request('/admin/alat?halaman=4');
+    assert.equal(rowIds(last.html).length, 1);
+    assert.match(last.html, /Menampilkan <strong>31<\/strong> dari <strong>31<\/strong> alat/);
+  } finally {
+    await site.stop();
+  }
+});

@@ -10,7 +10,9 @@ import {
   staffTabs, statuses, validEmail, validateEquipment, validateLoan,
 } from './domain.js';
 import { addMissingEquipment, missingEquipment } from './equipment-samples.js';
-import { catalogData, icon, initials, sorts } from './presentation.js';
+import {
+  catalogData, icon, initials, inventoryPageNumber, inventoryPageQuery, inventoryPagination, sorts,
+} from './presentation.js';
 import { demoAccounts, prepareData } from './seed.js';
 
 const file = (path) => fileURLToPath(new URL(path, import.meta.url));
@@ -79,7 +81,7 @@ export async function createApp({
 
   Object.assign(app.locals, {
     icon, initials, categories, categoryById, statuses, sorts, demo, demoAccounts, sampleInventory, catalogOnly,
-    formatDate, maxLoanDays: MAX_LOAN_DAYS, maxAdvanceDays: MAX_ADVANCE_DAYS,
+    formatDate, inventoryPageQuery, maxLoanDays: MAX_LOAN_DAYS, maxAdvanceDays: MAX_ADVANCE_DAYS,
     user: null, page: '',
   });
 
@@ -275,28 +277,35 @@ export async function createApp({
     res.redirect(303, `/admin?status=${nextTab}&hasil=${result}`);
   });
 
-  app.get('/admin/alat', requireAdmin, async (_req, res) => {
-    const items = await inventory.inventory();
-    res.render('admin-inventory', { page: 'admin', items, draftCount: missingEquipment(items).length });
-  });
-
-  app.post('/admin/alat/paket', requireAdmin, async (_req, res) => {
-    const added = await inventory.transaction(async (database) => {
-      return addMissingEquipment(database, await database.inventory());
+  app.get('/admin/alat', requireAdmin, async (req, res) => {
+    const summary = await inventory.inventorySummary();
+    const paging = inventoryPagination(summary.length, req.query.halaman);
+    const items = await inventory.inventoryPage(paging.limit, paging.offset);
+    res.render('admin-inventory', {
+      page: 'admin', items, paging, pageQuery: inventoryPageQuery(paging.number),
+      draftCount: missingEquipment(summary).length,
     });
-    res.redirect(303, '/admin/alat?hasil=' + (added ? 'paket-draf' : 'paket-lengkap'));
   });
 
-  function showInventoryForm(res, item, values = item, error = '', status = 200) {
-    res.status(status).render('admin-equipment', { page: 'admin', item, values, error });
+  app.post('/admin/alat/paket', requireAdmin, async (req, res) => {
+    const added = await inventory.transaction(async (database) => {
+      return addMissingEquipment(database, await database.inventorySummary());
+    });
+    const result = added ? 'paket-draf' : 'paket-lengkap';
+    res.redirect(303, '/admin/alat' + inventoryPageQuery(inventoryPageNumber(req.query.halaman), result));
+  });
+
+  function showInventoryForm(req, res, item, values = item, error = '', status = 200) {
+    const pageQuery = inventoryPageQuery(inventoryPageNumber(req.query.halaman));
+    res.status(status).render('admin-equipment', { page: 'admin', item, values, error, pageQuery });
   }
 
-  app.get('/admin/alat/baru', requireAdmin, (_req, res) => {
-    showInventoryForm(res, null, { name: '', category: '', description: '', total: '', active: 1 });
+  app.get('/admin/alat/baru', requireAdmin, (req, res) => {
+    showInventoryForm(req, res, null, { name: '', category: '', description: '', total: '', active: 1 });
   });
 
   app.get('/admin/alat/:id', requireAdmin, async (req, res) => {
-    showInventoryForm(res, await inventory.equipment(recordId(req.params.id)));
+    showInventoryForm(req, res, await inventory.equipment(recordId(req.params.id)));
   });
 
   app.post(['/admin/alat', '/admin/alat/:id'], requireAdmin, async (req, res) => {
@@ -305,12 +314,12 @@ export async function createApp({
       const form = validateEquipment(req.body);
       if (item) await inventory.updateEquipment(item.id, form);
       else await inventory.addEquipment(form);
-      res.redirect(303, '/admin/alat?hasil=disimpan');
+      res.redirect(303, '/admin/alat' + inventoryPageQuery(inventoryPageNumber(req.query.halaman), 'disimpan'));
     } catch (error) {
       if (!(error instanceof AppError)) throw error;
       const values = formValues(req.body, ['name', 'category', 'description', 'total']);
       values.active = req.body.active === '1' ? 1 : 0;
-      showInventoryForm(res, item, values, error.message, error.status);
+      showInventoryForm(req, res, item, values, error.message, error.status);
     }
   });
 
