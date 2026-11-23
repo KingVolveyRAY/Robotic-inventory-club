@@ -1650,6 +1650,13 @@ summary::-webkit-details-marker {
   accent-color: var(--focus);
 }
 
+.inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .inventory-table {
   overflow: auto;
 }

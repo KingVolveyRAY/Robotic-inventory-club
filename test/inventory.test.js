@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createApp } from '../src/app.js';
+import { openInventory } from '../src/database.js';
 import { clubDate, shiftDate } from '../src/domain.js';
+import { starterEquipment } from '../src/equipment-samples.js';
 import { demoAccounts } from '../src/seed.js';
 
 async function tempDatabase(t) {
@@ -77,7 +79,7 @@ test('catalog supports search, categories, sorting, and accurate availability', 
     const guest = new Client(site);
     const catalog = await guest.request('/');
     assert.equal(catalog.status, 200);
-    assert.equal((catalog.html.match(/class="equipment-card"/g) ?? []).length, 6);
+    assert.equal((catalog.html.match(/class="equipment-card"/g) ?? []).length, 30);
     const result = await guest.request('/?kategori=sensor&q=hc-sr04&urut=nama');
     assert.match(result.html, /Sensor Ultrasonik HC-SR04/);
     assert.doesNotMatch(result.html, /Arduino Uno R3/);
@@ -158,9 +160,11 @@ test('inventory changes persist and stock edits respect active loans', async (t)
   try {
     const admin = new Client(restarted);
     assert.equal((await admin.login(demoAccounts.admin)).status, 303);
-    assert.match((await admin.request('/admin/alat')).html, /Modul Driver Motor/);
-    assert.equal((await admin.post('/admin/alat/7', { ...item, active: '0' })).status, 303);
-    assert.equal((await admin.request('/alat/7')).status, 404);
+    const catalog = await admin.request('/?q=Modul+Driver');
+    const id = catalog.html.match(/href="\/alat\/(\d+)" aria-label="Detail Modul Driver Motor"/)?.[1];
+    assert.ok(id);
+    assert.equal((await admin.post('/admin/alat/' + id, { ...item, active: '0' })).status, 303);
+    assert.equal((await admin.request('/alat/' + id)).status, 404);
     assert.doesNotMatch((await admin.request('/')).html, /Modul Driver Motor/);
   } finally {
     await restarted.stop();
@@ -244,5 +248,107 @@ test('admin username works and password revisions revoke sessions without resett
     }
   } finally {
     await oldSite.stop();
+  }
+});
+
+test('an existing example catalog is expanded once and preserves edited equipment', async (t) => {
+  const path = await tempDatabase(t);
+  const old = await openInventory({ databasePath: path });
+  const edited = {
+    ...starterEquipment[0],
+    name: 'Arduino utama klub',
+    total: 3,
+    active: 0,
+  };
+  let editedId;
+  try {
+    editedId = await old.addEquipment(edited);
+    for (const item of starterEquipment.slice(1)) {
+      await old.addEquipment({ ...item, active: 1 });
+    }
+    await old.setMetadata('sample-equipment-seeded', '1');
+  } finally {
+    await old.close();
+  }
+
+  for (let start = 0; start < 2; start++) {
+    const site = await startSite(path, { sampleInventory: true });
+    try {
+      const guest = new Client(site);
+      const catalog = await guest.request('/');
+      assert.equal((catalog.html.match(/class="equipment-card"/g) ?? []).length, 29);
+      assert.doesNotMatch(catalog.html, /Arduino utama klub|Arduino Uno R3/);
+      assert.match((await guest.request('/?kategori=sensor&q=mpu-6050')).html, /sensor-mpu6050\.webp/);
+    } finally {
+      await site.stop();
+    }
+  }
+
+  const store = await openInventory({ databasePath: path });
+  try {
+    assert.equal((await store.inventory()).length, 30);
+    const saved = await store.equipment(editedId);
+    assert.equal(saved.name, edited.name);
+    assert.equal(saved.image, edited.image);
+    assert.equal(saved.total, edited.total);
+    assert.equal(saved.active, edited.active);
+  } finally {
+    await store.close();
+  }
+});
+
+test('only staff can import missing equipment as hidden drafts with images', async (t) => {
+  const path = await tempDatabase(t);
+  const account = { email: 'pengurus@example.test', password: 'Testing-Password-123!' };
+  const initial = await openInventory({ databasePath: path });
+  try {
+    await initial.addEquipment({
+      name: 'ESP32 DevKit V1', category: 'mikrokontroler', total: 7, active: 1,
+      description: 'Papan ESP32 yang sudah terdaftar sebagai stok klub.',
+    });
+    // An older installation could mark a non-empty club catalog without adding sample equipment.
+    await initial.setMetadata('sample-equipment-seeded', '1');
+  } finally {
+    await initial.close();
+  }
+
+  const site = await startSite(path, { admin: account, sampleInventory: true });
+  try {
+    const member = new Client(site);
+    await register(member, 'Anggota Uji', 'anggota@example.test');
+    assert.equal((await member.post('/admin/alat/paket')).status, 403);
+
+    const admin = new Client(site);
+    assert.equal((await admin.login(account)).location, '/admin');
+    assert.match((await admin.request('/admin/alat')).html, /Impor 29 draf alat/);
+    const imports = await Promise.all([admin.post('/admin/alat/paket'), admin.post('/admin/alat/paket')]);
+    assert.deepEqual(imports.map((response) => response.location).sort(), [
+      '/admin/alat?hasil=paket-draf',
+      '/admin/alat?hasil=paket-lengkap',
+    ]);
+    assert.doesNotMatch((await member.request('/')).html, /Sensor IMU MPU-6050/);
+
+    const store = await openInventory({ databasePath: path });
+    let sensor;
+    try {
+      const items = await store.inventory();
+      assert.equal(items.length, 30);
+      sensor = items.find((item) => item.image === 'sensor-mpu6050.webp');
+      assert.equal(sensor.total, 0);
+      assert.equal(sensor.active, 0);
+      const existing = items.find((item) => item.name === 'ESP32 DevKit V1');
+      assert.equal(existing.total, 7);
+      assert.equal(existing.active, 1);
+    } finally {
+      await store.close();
+    }
+
+    assert.equal((await admin.post('/admin/alat/' + sensor.id, { ...sensor, total: '2', active: '1' })).status, 303);
+    const result = await member.request('/alat/' + sensor.id);
+    assert.equal(result.status, 200);
+    assert.match(result.html, /sensor-mpu6050\.webp/);
+    assert.match(result.html, /2 unit/);
+  } finally {
+    await site.stop();
   }
 });

@@ -9,6 +9,7 @@ import {
   MAX_ADVANCE_DAYS, MAX_LOAN_DAYS, memberTabs, normalizeEmail, recordId, shiftDate,
   staffTabs, statuses, validEmail, validateEquipment, validateLoan,
 } from './domain.js';
+import { addMissingEquipment, missingEquipment } from './equipment-samples.js';
 import { catalogData, icon, initials, sorts } from './presentation.js';
 import { demoAccounts, prepareData } from './seed.js';
 
@@ -22,6 +23,8 @@ const feedback = new Map([
   ['borrowed', 'Pengambilan alat tercatat.'],
   ['returned', 'Pengembalian tercatat dan stok tersedia kembali.'],
   ['disimpan', 'Data alat berhasil disimpan.'],
+  ['paket-draf', 'Paket alat disimpan sebagai draf. Isi stok dan tampilkan alat yang tersedia.'],
+  ['paket-lengkap', 'Semua alat di paket sudah ada di inventaris.'],
 ]);
 
 function safeNext(value) {
@@ -273,7 +276,15 @@ export async function createApp({
   });
 
   app.get('/admin/alat', requireAdmin, async (_req, res) => {
-    res.render('admin-inventory', { page: 'admin', items: await inventory.inventory() });
+    const items = await inventory.inventory();
+    res.render('admin-inventory', { page: 'admin', items, draftCount: missingEquipment(items).length });
+  });
+
+  app.post('/admin/alat/paket', requireAdmin, async (_req, res) => {
+    const added = await inventory.transaction(async (database) => {
+      return addMissingEquipment(database, await database.inventory());
+    });
+    res.redirect(303, '/admin/alat?hasil=' + (added ? 'paket-draf' : 'paket-lengkap'));
   });
 
   function showInventoryForm(res, item, values = item, error = '', status = 200) {

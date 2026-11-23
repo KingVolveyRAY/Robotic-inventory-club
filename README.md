@@ -11,7 +11,7 @@ npm ci
 npm run demo
 ```
 
-Buka http://127.0.0.1:3000. Pilih **Masuk → Akun demo** untuk mencoba sebagai anggota atau pengurus. Pengurus demo juga bisa masuk dengan nama pengguna `adminpeminjaman` dan kata sandi demo `Rakit-Robot-Bareng`. Kamu juga bisa mendaftarkan akun anggota baru. Demo memuat enam jenis alat dan beberapa contoh peminjaman. Perubahan demo disimpan di `.data/demo.sqlite`. Gunakan `npm run dev` untuk memuat ulang server saat mengubah kode di folder `src`.
+Buka http://127.0.0.1:3000. Pilih **Masuk → Akun demo** untuk mencoba sebagai anggota atau pengurus. Pengurus demo juga bisa masuk dengan nama pengguna `adminpeminjaman` dan kata sandi demo `Rakit-Robot-Bareng`. Kamu juga bisa mendaftarkan akun anggota baru. Demo memuat 30 jenis alat dan beberapa contoh peminjaman. Perubahan demo disimpan di `.data/demo.sqlite`. Gunakan `npm run dev` untuk memuat ulang server saat mengubah kode di folder `src`.
 
 ### Alur yang bisa dicoba
 
@@ -46,13 +46,17 @@ Impor repositori di Vercel dengan preset **Express** dan runtime Node.js 24. Hub
 
 - `DATABASE_URL` berisi URL koneksi PostgreSQL. Gunakan database terpisah untuk Production dan Preview.
 - `ROBOLAB_ADMIN_EMAIL` dan `ROBOLAB_ADMIN_PASSWORD` menyiapkan akun pengurus. Nama pengguna pengurus utama adalah `adminpeminjaman`. Gunakan kata sandi privat untuk Production.
-- `ROBOLAB_SAMPLE_INVENTORY=1` mengisi enam alat contoh sekali pada database baru. Opsi ini cocok untuk database khusus review.
+- `ROBOLAB_SAMPLE_INVENTORY=1` mengisi 30 alat contoh pada database kosong. Katalog contoh lama mendapat 24 tambahan. Jumlah unit di mode ini adalah stok simulasi untuk review.
 
 Hubungkan repositori lewat **Settings → Git** jika belum terhubung. Setelah menyimpan variabel di lingkungan **Production**, buka **Deployments → Create Deployment** dan masukkan branch `main`. Vercel akan membuat build baru menggunakan pengaturan terbaru.
 
 Buka `/healthz` untuk memeriksa koneksi database dan buka halaman utama untuk melihat katalog. `npm run demo` tetap memakai SQLite lokal dan dua akun demo. Akun demo lokal tidak dibuat pada Vercel.
 
 Untuk pratinjau publik katalog tanpa akun dan penyimpanan permanen, gunakan `ROBOLAB_PUBLIC_CATALOG=1`. Hapus opsi itu saat mengaktifkan peminjaman dengan PostgreSQL.
+
+### Tambah paket alat ke inventaris klub
+
+Buka **Panel Pengurus → Inventaris → Impor draf alat**. Paket menambahkan entri yang belum ada, lengkap dengan deskripsi dan gambar ilustrasi. Draf dimulai dengan stok 0 dan tersembunyi dari katalog. Edit alat untuk mencatat jumlah unit yang dimiliki klub dan menampilkannya ke anggota.
 
 ### Ganti kata sandi pengurus yang sudah ada
 

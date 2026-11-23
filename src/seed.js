@@ -1,5 +1,6 @@
 import { hashPassword, validPassword } from './auth.js';
 import { ADMIN_USERNAME, clubDate, normalizeEmail, shiftDate, validEmail } from './domain.js';
+import { addMissingEquipment, equipmentSamples, expandedEquipment, starterEquipment } from './equipment-samples.js';
 
 export const demoAccounts = {
   member: { name: 'Alya Pratama', email: 'anggota@robolab.test', password: 'Demo-Anggota-2026!' },
@@ -12,32 +13,7 @@ export const demoAccounts = {
   },
 };
 
-const demoEquipment = [
-  {
-    name: 'Arduino Uno R3', category: 'mikrokontroler', image: 'arduino-uno.webp', total: 8,
-    description: 'Papan pengembangan ATmega328P untuk prototipe, praktik pemrograman, dan integrasi sensor.',
-  },
-  {
-    name: 'Motor Servo MG996R', category: 'motor', image: 'servo-mg996r.webp', total: 6,
-    description: 'Servo torsi tinggi dengan roda gigi logam untuk lengan robot dan mekanisme gerak.',
-  },
-  {
-    name: 'Sensor Ultrasonik HC-SR04', category: 'sensor', image: 'sensor-hc-sr04.webp', total: 8,
-    description: 'Sensor jarak ultrasonik untuk deteksi objek, navigasi, dan robot penghindar rintangan.',
-  },
-  {
-    name: 'Kit Chassis Robot 4WD', category: 'kit', image: 'chassis-4wd.webp', total: 3,
-    description: 'Rangka dasar robot empat roda dengan motor DC untuk proyek robot bergerak.',
-  },
-  {
-    name: 'Multimeter Digital', category: 'perkakas', image: 'multimeter.webp', total: 4,
-    description: 'Alat ukur portabel untuk memeriksa tegangan, arus, resistansi, serta kontinuitas rangkaian.',
-  },
-  {
-    name: 'Stasiun Solder', category: 'perkakas', image: 'solder.webp', total: 2,
-    description: 'Stasiun solder dengan pengaturan suhu untuk perakitan dan perbaikan komponen elektronik.',
-  },
-];
+const starterImages = new Set(starterEquipment.map((item) => item.image));
 
 export async function prepareData(inventory, { demo, admin, sampleInventory }) {
   const modeKey = demo ? 'mode:demo' : 'mode:live';
@@ -49,18 +25,29 @@ export async function prepareData(inventory, { demo, admin, sampleInventory }) {
     if (!await database.hasMetadata(modeKey)) await database.setMetadata(modeKey, '1');
   });
 
-  if (demo) {
-    await seedDemo(inventory);
-  } else {
-    if (admin) await seedAdmin(inventory, admin);
-    if (sampleInventory) {
-      await inventory.transaction(async (database) => {
-        if (await database.hasMetadata('sample-equipment-seeded')) return;
-        if ((await database.inventory()).length === 0) await addSamples(database);
-        await database.setMetadata('sample-equipment-seeded', '1');
-      });
+  if (demo) await seedDemo(inventory);
+  else if (admin) await seedAdmin(inventory, admin);
+
+  if (demo || sampleInventory) await seedSampleCatalog(inventory, demo);
+}
+
+async function seedSampleCatalog(inventory, demo) {
+  await inventory.transaction(async (database) => {
+    if (await database.hasMetadata('sample-catalog:v2')) return;
+
+    const items = await database.inventory();
+    const previouslySeeded = await database.hasMetadata('sample-equipment-seeded');
+    if (!demo && items.length && !(previouslySeeded && items.some((item) => starterImages.has(item.image)))) {
+      return;
     }
-  }
+
+    await addMissingEquipment(database, items, {
+      samples: items.length ? expandedEquipment : equipmentSamples,
+      sampleStock: true,
+    });
+    if (!demo && !previouslySeeded) await database.setMetadata('sample-equipment-seeded', '1');
+    await database.setMetadata('sample-catalog:v2', '1');
+  });
 }
 
 async function seedAdmin(inventory, { email: configuredEmail, password, passwordRevision = 0 }) {
@@ -108,7 +95,10 @@ async function seedDemo(inventory) {
       username: demoAccounts.admin.username,
       passwordRevision: demoAccounts.admin.passwordRevision,
     });
-    const ids = await addSamples(database);
+    const ids = [];
+    for (const item of starterEquipment) {
+      ids.push(await database.addEquipment({ ...item, active: 1 }));
+    }
     const date = clubDate();
     const examples = [
       { index: 0, quantity: 2, from: -2, to: 5, status: 'borrowed', purpose: 'Prototipe robot pengikut garis' },
@@ -126,12 +116,4 @@ async function seedDemo(inventory) {
     }
     await database.setMetadata('demo-seeded', '1');
   });
-}
-
-async function addSamples(database) {
-  const ids = [];
-  for (const item of demoEquipment) {
-    ids.push(await database.addEquipment({ ...item, active: 1 }));
-  }
-  return ids;
 }

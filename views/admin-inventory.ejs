@@ -6,7 +6,15 @@
       <h1>Kelola inventaris</h1>
       <p>Tambah alat, atur total stok, dan tentukan alat yang tampil di katalog.</p>
     </div>
-    <a class="button button-primary" href="/admin/alat/baru"><%- icon('plus', 18) %> Tambah alat</a>
+    <div class="inventory-actions">
+      <% if (draftCount) { %>
+        <form action="/admin/alat/paket" method="post" data-busy-label="Mengimpor…">
+          <%- include('partials/csrf') %>
+          <button class="button button-secondary" type="submit"><%- icon('package-plus', 18) %> Impor <%= draftCount %> draf alat</button>
+        </form>
+      <% } %>
+      <a class="button button-primary" href="/admin/alat/baru"><%- icon('plus', 18) %> Tambah alat</a>
+    </div>
   </div>
   <%- include('partials/admin-nav', { current: 'inventory' }) %>
   <%- include('partials/feedback') %>
