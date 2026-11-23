@@ -9,7 +9,7 @@
       <h1 id="hero-title" data-word-reveal>Peralatan robotik,<br><span class="hero-highlight">siap kamu pinjam.</span></h1>
       <p>Dari mikrokontroler hingga kit robotik, temukan alat yang kamu butuhkan untuk proyek berikutnya.</p>
       <div class="hero-actions">
-        <a class="button button-primary" href="#katalog">Jelajahi alat <%- icon('arrow-down', 17) %></a>
+        <a class="button button-primary" href="#katalog" data-smooth-scroll>Jelajahi alat <%- icon('arrow-down', 17) %></a>
         <a class="button button-secondary" href="/panduan">Cara peminjaman <%- icon('arrow-up-right', 17) %></a>
       </div>
     </div>
@@ -30,7 +30,7 @@
     <% } %>
   </section>
 
-  <section class="catalog" id="katalog" aria-labelledby="catalog-title">
+  <section class="catalog" id="katalog" tabindex="-1" aria-labelledby="catalog-title">
     <div class="catalog-heading">
       <div>
         <h2 id="catalog-title" data-word-reveal>Katalog alat</h2>

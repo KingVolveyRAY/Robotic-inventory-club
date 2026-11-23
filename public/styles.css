@@ -37,6 +37,11 @@
   scroll-behavior: smooth;
 }
 
+/* ScrollTrigger restores the document's scroll behavior with an inline style. */
+:root.lenis {
+  scroll-behavior: auto !important;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -918,13 +923,17 @@ summary::-webkit-details-marker {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: box-shadow 220ms var(--ease), translate 220ms var(--ease);
+  transition: box-shadow 220ms var(--ease);
 }
 
-.equipment-card:hover,
 .equipment-card:focus-within {
-  translate: -2px -3px;
   box-shadow: 6px 7px 0 var(--ink);
+}
+
+@media (hover: hover) {
+  .equipment-card:hover {
+    box-shadow: 6px 7px 0 var(--ink);
+  }
 }
 
 .card-media,
@@ -953,15 +962,6 @@ summary::-webkit-details-marker {
 .detail-media img {
   position: absolute;
   inset: 0;
-}
-
-.card-media img {
-  transition: transform 400ms var(--ease);
-}
-
-.equipment-card:hover .card-media img,
-.equipment-card:focus-within .card-media img {
-  transform: scale(1.045);
 }
 
 .image-placeholder {
@@ -1847,18 +1847,6 @@ summary::-webkit-details-marker {
 
 .guide-policy li + li {
   margin-top: 4px;
-}
-
-.is-revealing {
-  animation: settle-in 460ms var(--ease) both;
-}
-
-.equipment-card.is-revealing:nth-child(3n + 2) {
-  animation-delay: 45ms;
-}
-
-.equipment-card.is-revealing:nth-child(3n + 3) {
-  animation-delay: 85ms;
 }
 
 @keyframes settle-in {

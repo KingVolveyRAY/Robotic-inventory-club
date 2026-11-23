@@ -21,6 +21,8 @@ const publicPath = file('../public');
 const motionScripts = new Map([
   ['gsap.min.js', readFileSync(new URL('../node_modules/gsap/dist/gsap.min.js', import.meta.url))],
   ['ScrollTrigger.min.js', readFileSync(new URL('../node_modules/gsap/dist/ScrollTrigger.min.js', import.meta.url))],
+  ['motion.js', readFileSync(new URL('../node_modules/motion/dist/motion.js', import.meta.url))],
+  ['lenis.min.js', readFileSync(new URL('../node_modules/lenis/dist/lenis.min.js', import.meta.url))],
 ]);
 const feedback = new Map([
   ['diajukan', 'Pengajuan terkirim. Kamu bisa memantau statusnya di sini.'],
